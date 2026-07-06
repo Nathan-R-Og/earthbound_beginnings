@@ -1,11 +1,11 @@
-module earthboundbeginnings.bank13;
+module earthboundbeginnings.overworld;
 
 import earthboundbeginnings.external;
 
 /**
  * Original_Address: $(DOLLAR) $A000, bank $13
  */
-void unknown13A000() {
+void unknown13A000() @safe {
 	//	LDA #$05
 	//	STA $07F1
 	//UNKNOWN_13A005:
@@ -85,7 +85,7 @@ void unknown13A000() {
 	//@UNKNOWN9:
 	//	PLA
 	//	JMP UNKNOWN_C3F4
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_13A08F:
@@ -151,7 +151,7 @@ void unknown13A000() {
 //	STA $74
 //	STX $75
 //@UNKNOWN6:
-//	JSR UNKNOWN_C6DB
+//	JSR DrawTilepackClear
 //	CMP #$00
 //	BNE @UNKNOWN6
 //	RTS
@@ -165,7 +165,7 @@ void unknown13A000() {
 /**
  * Original_Address: $(DOLLAR) $A123, bank $13
  */
-void unknown13A123() {
+void unknown13A123() @safe {
 	//	LDA #$80
 	//	BIT $D4
 	//	BNE @UNKNOWN0
@@ -205,13 +205,13 @@ void unknown13A123() {
 	//	JSR UNKNOWN_13A445
 	//	JSR UNKNOWN_13AB30
 	//	JMP UNKNOWN_C3F4
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 /**
  * Original_Address: $(DOLLAR) $A178, bank $13
  */
-void unknown13A178() {
+void unknown13A178() @safe {
 	//	LDA #$05
 	//	STA $07F1
 	//	JSR UNKNOWN_C26C
@@ -234,7 +234,7 @@ void unknown13A178() {
 	//	LDA UNKNOWN_13A1A4,X
 	//	PHA
 	//	RTS
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_13A1A4:
@@ -258,7 +258,7 @@ void unknown13A178() {
 /**
  * Original_Address: $(DOLLAR) $A1C6, bank $13
  */
-bool unknown13A1C6() {
+bool unknown13A1C6() @safe {
 	//	JSR UNKNOWN_E266
 	//	BCS @UNKNOWN1
 	//	JSR UNKNOWN_13A9C7
@@ -279,7 +279,8 @@ bool unknown13A1C6() {
 	//	BCC @UNKNOWN0
 	//@UNKNOWN2:
 	//	RTS
-	assert(0, "NYI");
+	//assert(0, "NYI");
+	return false;
 }
 
 //UNKNOWN_13A1EA:
@@ -1177,7 +1178,7 @@ bool unknown13A1C6() {
 /**
  * Original_Address: $(DOLLAR) $A82F, bank $13
  */
-void unknown13A82F() {
+void unknown13A82F() @safe {
 	//	LDA #$05
 	//	STA $07F1
 	//UNKNOWN_13A834:
@@ -1190,8 +1191,8 @@ void unknown13A82F() {
 	//	JMP UNKNOWN_13A909
 	//@UNKNOWN3:
 	//	JSR UNKNOWN_13AB30
-	//	JSR UNKNOWN_EDDC
-	//	JSR UNKNOWN_FD5E
+	//	JSR OT0_DefaultTransition
+	//	JSR ClearSprites
 	//	LDX #$00
 	//	LDY #$08
 	//	JSR UNKNOWN_EECC
@@ -1226,7 +1227,7 @@ void unknown13A82F() {
 	//	STA $DA
 	//@UNKNOWN4:
 	//	LDX #$08
-	//	JSR UNKNOWN_FD3A
+	//	JSR WaitXFrames_Min1
 	//	LDA #$DF
 	//	EOR $0201
 	//	STA $0201
@@ -1236,8 +1237,8 @@ void unknown13A82F() {
 	//	STA $DA
 	//	LDA #$F0
 	//	STA $0200
-	//	JSR UNKNOWN_FD33
-	//	JSR UNKNOWN_EDDF
+	//	JSR PpuSync
+	//	JSR B31_0ddf
 	//	JSR UNKNOWN_EE7F
 	//	LDA #$F9
 	//	AND $FE
@@ -1247,9 +1248,9 @@ void unknown13A82F() {
 	//	JSR BANK_SWAP
 	//	LDA #$00
 	//	STA $07F7
-	//	JSR UNKNOWN_FD5E
+	//	JSR ClearSprites
 	//	JMP UNKNOWN_CFAC
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_13A8D4:
@@ -1539,12 +1540,12 @@ void unknown13A82F() {
 /**
  * Original_Address: $(DOLLAR) $AB53, bank $13
  */
-void unknown13AB53() {
+void unknown13AB53() @safe {
 	//	JSR UNKNOWN_E266
 	//	JSR UNKNOWN_13AB3E
 	//	LDY $35
 	//	JMP UNKNOWN_13AB19
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_13AB5E:
@@ -1672,11 +1673,11 @@ void unknown13AB53() {
 //UNKNOWN_13AC44:
 //	STA $74
 //	STX $75
-//	JMP UNKNOWN_C6D2
+//	JMP DrawTilepack
 
 //UNKNOWN_13AC4B:
 //	JSR UNKNOWN_13AB30
-//	JSR UNKNOWN_EDDC
+//	JSR OT0_DefaultTransition
 //	JMP RESET
 
 //UNKNOWN_13AC54:
@@ -1774,7 +1775,7 @@ void unknown13AB53() {
 //	BCC @UNKNOWN1
 //	CMP #$2C
 //	BCS @UNKNOWN1
-//	JSR UNKNOWN_EE8E
+//	JSR BackupPalette
 //	INY
 //	LDA ($32),Y
 //	STA $08
@@ -1807,7 +1808,7 @@ void unknown13AB53() {
 //	LDA ($32),Y
 //	TAX
 //	INY
-//	JMP UNKNOWN_FD3A
+//	JMP WaitXFrames_Min1
 //UNKNOWN_13AD0D:
 //	INY
 //	LDA ($32),Y
@@ -3042,13 +3043,13 @@ void unknown13AB53() {
 //UNKNOWN_13B546:
 //	STY $35
 //	LDX #$3C
-//	JSR UNKNOWN_FD3A
-//	JSR UNKNOWN_EDDC
+//	JSR WaitXFrames_Min1
+//	JSR OT0_DefaultTransition
 //	JSR UNKNOWN_13B561
 //	JSR UNKNOWN_13BC0A
 //	LDA #$55
 //	STA $2C
-//	JSR UNKNOWN_EE30
+//	JSR B31_0e30
 //	LDY $35
 //	INY
 //	RTS
@@ -3327,7 +3328,7 @@ void unknown13AB53() {
 //	RTS
 
 //UNKNOWN_13B725:
-//	JSR UNKNOWN_FD33
+//	JSR PpuSync
 //	JSR UNKNOWN_EF1B
 //	INY
 //	RTS
@@ -3723,7 +3724,7 @@ void unknown13AB53() {
 //	LDA #$B6
 //	LDX #$BA
 //	JSR UNKNOWN_13AC44
-//	JSR UNKNOWN_C6D2
+//	JSR DrawTilepack
 //	LDX #$00
 //	JSR UNKNOWN_13BA72
 //	JSR UNKNOWN_13BA72
@@ -3872,7 +3873,7 @@ void unknown13AB53() {
 //	STA $70
 //	STX $76
 //	STY $77
-//	JMP UNKNOWN_C6D2
+//	JMP DrawTilepack
 
 //UNKNOWN_13BB40:
 //	LDA #$0B
@@ -3943,7 +3944,7 @@ void unknown13AB53() {
 //	INY
 //	LDA ($60),Y
 //	STA $75
-//	JSR UNKNOWN_C6D2
+//	JSR DrawTilepack
 //	JMP UNKNOWN_13AB41
 
 //UNKNOWN_13BBC3:
@@ -4134,7 +4135,7 @@ void unknown13AB53() {
 /**
  * Original_Address: $(DOLLAR) $BCEC, bank $13
  */
-void unknown13BCEC() {
+void OverworldTransitionIntepreter() @safe {
 	//LDA $0E
 	//ASL
 	//TAX
@@ -4145,11 +4146,11 @@ void unknown13BCEC() {
 	//LDA UNKNOWN_13BCFD,X
 	//PHA
 	//RTS
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_13BCFD:
-//	.WORD UNKNOWN_EDDC - 1
+//	.WORD OT0_DefaultTransition - 1
 //	.WORD UNKNOWN_13BD0D - 1
 //	.WORD UNKNOWN_13BD15 - 1
 //	.WORD UNKNOWN_13BD31 - 1
@@ -4161,7 +4162,7 @@ void unknown13BCEC() {
 //UNKNOWN_13BD0D:
 //	LDA #$08
 //	STA $07F0
-//	JMP UNKNOWN_EDDC
+//	JMP OT0_DefaultTransition
 
 //UNKNOWN_13BD15:
 //	LDA #$10
@@ -4176,17 +4177,17 @@ void unknown13BCEC() {
 //	JSR UNKNOWN_FDF3
 //@UNKNOWN0:
 //	LDX #$3C
-//	JMP UNKNOWN_FD3A
+//	JMP WaitXFrames_Min1
 
 //UNKNOWN_13BD31:
 //	JSR UNKNOWN_13BD3B
 //UNKNOWN_13BD34:
 //	LDA #$20
 //	STA $20
-//	JMP UNKNOWN_EDDC
+//	JMP OT0_DefaultTransition
 
 //UNKNOWN_13BD3B:
-//	JSR UNKNOWN_EE8E
+//	JSR BackupPalette
 //	LDA #$02
 //	STA $07F0
 //	LDA #$14
@@ -4209,7 +4210,7 @@ void unknown13BCEC() {
 //	STA $07F0
 //	LDA #$11
 //	JSR UNKNOWN_EE21
-//	JSR UNKNOWN_FD5E
+//	JSR ClearSprites
 //	JSR UNKNOWN_EEC8
 //	LDA #$5D
 //	LDX #BANK::CHR1000
@@ -4232,7 +4233,7 @@ void unknown13BCEC() {
 //	PHA
 //	LDX #$08
 //@UNKNOWN1:
-//	JSR UNKNOWN_FD33
+//	JSR PpuSync
 //	LDA #$01
 //	STA $0305,X
 //	LDA $0303,X
@@ -4263,10 +4264,10 @@ void unknown13BCEC() {
 //	TAY
 //	DEY
 //	BNE @UNKNOWN0
-//	JSR UNKNOWN_FD5E
-//	JSR UNKNOWN_EDDC
+//	JSR ClearSprites
+//	JSR OT0_DefaultTransition
 //	LDX #$5A
-//	JMP UNKNOWN_FD3A
+//	JMP WaitXFrames_Min1
 
 //UNKNOWN_13BDD9:
 //	LDA #$11
@@ -4293,14 +4294,14 @@ void unknown13BCEC() {
 //	LDA #$11
 //	JSR UNKNOWN_EDFE
 //	LDX #$5A
-//	JMP UNKNOWN_FD3A
+//	JMP WaitXFrames_Min1
 
 //UNKNOWN_13BE0F:
 //	JSR UNKNOWN_13BD34
 //	LDA #$FF
 //	JSR UNKNOWN_FD28
 //	LDX #$5A
-//	JSR UNKNOWN_FD3A
+//	JSR WaitXFrames_Min1
 //	JMP UNKNOWN_13B561
 
 //UNKNOWN_13BE1F:

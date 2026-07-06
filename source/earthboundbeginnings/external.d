@@ -6,7 +6,7 @@ import replatform64.nes;
 
 import std.concurrency;
 
-__gshared NES nes;
+NES!() nes;
 
-void loadExtraData(scope const char[] name, const scope ubyte[] data, scope PlatformBackend) {}
-void extractExtraData(scope AddFileFunction addFile, scope ProgressUpdateFunction reportProgress, immutable(ubyte)[] rom) {}
+void loadStuff(const scope char[] name, const scope ubyte[] data, scope PlatformBackend backend) @safe {}
+void extractStuff(scope AddFileFunction, scope ProgressUpdateFunction, scope immutable(ubyte)[] data) @safe {}

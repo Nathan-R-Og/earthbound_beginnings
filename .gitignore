@@ -2,6 +2,10 @@
 docs.json
 __dummy.html
 docs/
+data/split/
+*.nes
+__pycache__/
+*.sav
 /earthbound_beginnings
 earthbound_beginnings.so
 earthbound_beginnings.dylib

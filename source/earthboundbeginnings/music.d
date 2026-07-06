@@ -1,8 +1,8 @@
-module earthboundbeginnings.bank1c;
+module earthboundbeginnings.music;
 
 import earthboundbeginnings.external;
 
-//UNKNOWN_1C8000:
+//Music_Tick:
 //	JMP UNKNOWN_1C8277
 //UNKNOWN_1C8003:
 //	JMP UNKNOWN_1C8299
@@ -10,7 +10,7 @@ import earthboundbeginnings.external;
 /**
  * Original_Address: $(DOLLAR) $8006, bank $1C
  */
-void unknown1C8006() {
+void Music_Init() @safe {
 	version(audio) {
 		assert(0, "NYI");
 	}
@@ -2887,3 +2887,5 @@ void unknown1C8006() {
 //	.BYTE $9F, $B6, $B1, $C3, $B1, $46, $4C, $56, $46, $48, $56, $48, $4C, $FF, $9F, $0D, $B2, $B1, $56, $54, $54, $4C, $B2, $56, $56, $9F, $B6, $B1, $C2, $B1, $46, $4C, $56, $46, $48, $56, $48, $4C, $FF, $46, $4C, $54, $46, $4C, $54, $46, $4C, $9F, $0D, $B2, $B1, $56, $54, $54, $4C, $B2, $56, $54, $B2, $3E, $38, $3C, $B1, $3C, $3C, $B2, $3E, $34, $B3, $2E, $B1, $3E, $3C, $38, $34, $B2, $3C, $B1, $2A, $2A, $B6, $2E, $B2, $02, $00
 //UNKNOWN_1C9FC0:
 //	.BYTE $C2, $9F, $A2, $F4, $B2, $02, $B1, $3E, $3E, $46, $4C, $4C, $4C, $B2, $56, $54, $50, $54, $B1, $50, $B0, $54, $50, $B6, $4C, $9F, $13, $B3, $B1, $68, $64, $64, $5E, $B2, $68, $64, $FF, $9F, $A7, $F4, $B2, $50, $3E, $42, $B1, $4C, $48, $B2, $46, $3E, $B3, $34, $B1, $50, $4C, $48, $46, $B2, $42, $B1, $3E, $3C, $B6, $3E
+
+//dude :(

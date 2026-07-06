@@ -1,3 +1,3 @@
 module earthboundbeginnings.commondefs;
 
-struct GameConfig {}
+struct GameSettings {}

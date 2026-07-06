@@ -1,19 +1,20 @@
-module earthboundbeginnings.bank14;
+module earthboundbeginnings.title;
 
-import earthboundbeginnings.bank1e;
+import earthboundbeginnings.constant;
 import earthboundbeginnings.external;
+import earthboundbeginnings.ram;
 
 /**
  * Original_Address: $(DOLLAR) $9400, bank $14
  */
-void unknown149400() {
-	//	JSR UNKNOWN_CED3
-	//	JSR UNKNOWN_149D60
+void intro() @safe {
+	BANKSET_H13();
+	Title_Screen();
 	//UNKNOWN_149406:
-	//	JSR UNKNOWN_FD5E
-	//	JSR UNKNOWN_FD80
+	//	JSR ClearSprites
+	//	JSR ClearTilemaps
 	//	JSR UNKNOWN_CE02
-	//	JSR UNKNOWN_FD33
+	//	JSR PpuSync
 	//	LDA #$19
 	//	LDX #$8A
 	//	LDY #$A2
@@ -44,7 +45,7 @@ void unknown149400() {
 	//	LSR
 	//	LSR
 	//	RTS
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_14944D: ;-1 because we're using RTS to jump
@@ -62,7 +63,7 @@ void unknown149400() {
 //	PLA
 //	JSR $6041
 //	JSR UNKNOWN_FDED
-//	JSR UNKNOWN_CED3
+//	JSR BANKSET_H13
 //	JSR UNKNOWN_149A4D
 //	BCS UNKNOWN_149406
 //	JMP UNKNOWN_13BE57
@@ -161,7 +162,7 @@ void unknown149400() {
 /**
  * Original_Address: $(DOLLAR) $9516, bank $14
  */
-void unknown149516() {
+void unknown149516() @safe {
 	//	LDA $48
 	//	ORA $20
 	//	ORA $21
@@ -234,7 +235,7 @@ void unknown149516() {
 	//	JSR UNKNOWN_FDF3
 	//UNKNOWN_14958A:
 	//	RTS
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_14958B:
@@ -384,11 +385,11 @@ void unknown149516() {
 //	STA $E6
 //	LDA #$01
 //	STA $E5
-//	JSR UNKNOWN_FD33
+//	JSR PpuSync
 //	LDA #$00
 //	STA $0401
 //@UNKNOWN2:
-//	JSR UNKNOWN_C9D7
+//	JSR CalculateNTAddr
 //	LDA $0401
 //	ASL
 //	CLC
@@ -410,7 +411,7 @@ void unknown149516() {
 /**
  * Original_Address: $(DOLLAR) $9779, bank $14
  */
-void unknown149779() {
+void unknown149779() @safe {
 	//LDA #$38
 	//JSR UNKNOWN_EE21
 	//LDA #$05
@@ -421,20 +422,20 @@ void unknown149779() {
 	//LDA #$FF
 	//JSR UNKNOWN_FD28
 	//LDX #$B4
-	//JSR UNKNOWN_FD3A
+	//JSR WaitXFrames_Min1
 	//LDA #$0F
 	//JSR UNKNOWN_EDFE
 	//LDA #$00
 	//STA $EC
 	//JSR UNKNOWN_CE02
 	//JMP UNKNOWN_D674
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 /**
  * Original_Address: $(DOLLAR) $97A3, bank $14
  */
-void unknown1497A3() {
+void unknown1497A3() @safe {
 	//LDA #$0E
 	//JSR UNKNOWN_149920
 	//LDA #$D5
@@ -456,7 +457,7 @@ void unknown1497A3() {
 	//LDX #BANK::PRGA000
 	//JSR BANK_SWAP
 	//JMP $A000
-	assert(0, "NYI");
+	//assert(0, "NYI");
 }
 
 //UNKNOWN_1497D6:
@@ -485,11 +486,11 @@ void unknown1497A3() {
 //	TAX
 //	LDA UNKNOWN_149A05,X
 //	JSR UNKNOWN_EE0E
-//	JSR UNKNOWN_FD41
+//	JSR WaitNMI
 //	LDA #$0F
 //	JSR UNKNOWN_EE0E
 //@UNKNOWN2:
-//	JSR UNKNOWN_FD41
+//	JSR WaitNMI
 //	LDA $6B
 //	BNE @UNKNOWN3
 //	LDA $6C
@@ -565,7 +566,7 @@ void unknown1497A3() {
 //	RTS
 
 //UNKNOWN_149878:
-//	JSR UNKNOWN_FD33
+//	JSR PpuSync
 //	LDX $6A
 //	CLC
 //	LDA $FC
@@ -617,7 +618,7 @@ void unknown1497A3() {
 //	AND #$38
 //	ORA #$C0
 //	STA $64
-//	JSR UNKNOWN_FD33
+//	JSR PpuSync
 //	LDA #$05
 //	LDY #$40
 //	STA $0400
@@ -669,8 +670,8 @@ void unknown1497A3() {
 //	JSR UNKNOWN_FD28
 //	JSR UNKNOWN_1499A3
 //	JSR UNKNOWN_EECC
-//	JSR UNKNOWN_FD5E
-//	JSR UNKNOWN_FD33
+//	JSR ClearSprites
+//	JSR PpuSync
 //	LDX #$0F
 //@UNKNOWN0:
 //	LDA UNKNOWN_149A3D,X
@@ -716,7 +717,7 @@ void unknown1497A3() {
 //	STA $0520,X
 //	DEX
 //	BPL @UNKNOWN3
-//	JMP UNKNOWN_EE30
+//	JMP B31_0e30
 
 //UNKNOWN_14998B:
 //	CLC
@@ -809,7 +810,7 @@ void unknown1497A3() {
 //	BCS @UNKNOWN3
 //	JSR UNKNOWN_149D50
 //	JSR UNKNOWN_149AD5
-//	JSR UNKNOWN_EE30
+//	JSR B31_0e30
 //	JSR UNKNOWN_149B00
 //	BCC @UNKNOWN4
 //	JMP UNKNOWN_149A4D
@@ -817,7 +818,7 @@ void unknown1497A3() {
 //	JSR UNKNOWN_149D50
 //	LDX #$3C
 //	JSR UNKNOWN_F25E
-//	JSR UNKNOWN_EE30
+//	JSR B31_0e30
 //	LDA #$02
 //	STA $76
 //	LDA #$03
@@ -827,7 +828,7 @@ void unknown1497A3() {
 //	JSR UNKNOWN_149B13
 //	LDA #$FF
 //	STA $07F5
-//	JSR UNKNOWN_EE30
+//	JSR B31_0e30
 //	LDA #$06
 //	STA $76
 //	LDA #$0A
@@ -856,7 +857,7 @@ void unknown1497A3() {
 //	RTS
 
 //UNKNOWN_149AF3:
-//	JSR UNKNOWN_FD33
+//	JSR PpuSync
 //	JMP $625B
 
 //UNKNOWN_149AF9:
@@ -900,7 +901,7 @@ void unknown1497A3() {
 //	JSR UNKNOWN_149AF9
 //	JSR UNKNOWN_149B40
 //	JSR UNKNOWN_149B76
-//	JMP UNKNOWN_EE30
+//	JMP B31_0e30
 
 //UNKNOWN_149B40:
 //	LDA #$70
@@ -923,7 +924,7 @@ void unknown1497A3() {
 //	STA $74
 //	LDA $65
 //	STA $75
-//	JSR UNKNOWN_C6DB
+//	JSR DrawTilepackClear
 //	JSR $62B5
 //	PLA
 //	TAX
@@ -990,11 +991,11 @@ void unknown1497A3() {
 //	DEY
 //	BPL @UNKNOWN5
 //	JSR UNKNOWN_FDED
-//	JSR UNKNOWN_FD5E
+//	JSR ClearSprites
 //	CLC
 //	RTS
 //@UNKNOWN7:
-//	JSR UNKNOWN_FD5E
+//	JSR ClearSprites
 //	SEC
 //	RTS
 
@@ -1022,7 +1023,7 @@ void unknown1497A3() {
 //	LDA #$03
 //	STA $77
 //@UNKNOWN0:
-//	JSR UNKNOWN_C6DB
+//	JSR DrawTilepackClear
 //	CMP #$00
 //	BNE @UNKNOWN0
 //	RTS
@@ -1138,7 +1139,7 @@ void unknown1497A3() {
 //	RTS
 
 //UNKNOWN_149CCF:
-//	JSR UNKNOWN_F465
+//	JSR ErrBuzzer
 //	JSR UNKNOWN_149B76
 //	LDA #$7F
 //	LDX #$63
@@ -1157,7 +1158,7 @@ void unknown1497A3() {
 //	STX $76
 //	STY $77
 //@UNKNOWN0:
-//	JSR UNKNOWN_C6DB
+//	JSR DrawTilepackClear
 //	CMP #$00
 //	BNE @UNKNOWN0
 //@UNKNOWN1:
@@ -1172,7 +1173,7 @@ void unknown1497A3() {
 //	PHA
 //	LDA $77
 //	PHA
-//	JSR UNKNOWN_FD41
+//	JSR WaitNMI
 //	SEC
 //	LDA #$00
 //	SBC $56
@@ -1202,7 +1203,7 @@ void unknown1497A3() {
 //	STA $74
 //	LDA #$05
 //	STA $75
-//	JSR UNKNOWN_C6DB
+//	JSR DrawTilepackClear
 //	PLA
 //	STA $77
 //	PLA
@@ -1210,61 +1211,54 @@ void unknown1497A3() {
 //	RTS
 
 //UNKNOWN_149D50:
-//	JSR UNKNOWN_EDDC
-//	JSR UNKNOWN_FD5E
-//	JSR UNKNOWN_FD80
+//	JSR OT0_DefaultTransition
+//	JSR ClearSprites
+//	JSR ClearTilemaps
 //	LDX #$FD
 //	LDY #$62
-//	JMP UNKNOWN_F732
+//	JMP fill_nmi_with_pointer_data
 
-//UNKNOWN_149D60:
-//	JSR UNKNOWN_FD5E
-//	JSR UNKNOWN_FD80
-//	LDA $FF
-//	AND #$FC
-//	LDX #$00
-//	LDY #$00
-//	STA $FF
-//	STX $FD
-//	STY $FC
-//	LDA #$63
-//	LDX #$9E
-//	JSR UNKNOWN_CEE8
-//	LDA #$6F
-//	STA $60
-//	LDA #$9E
-//	STA $61
-//	JSR UNKNOWN_F496
-//	JSR UNKNOWN_EDDC
-//	LDA #$16
-//	CMP $078C
-//	BEQ @UNKNOWN0
-//	STA $07F5
-//@UNKNOWN0:
-//	LDX #$AF
-//	LDY #$9E
-//	JSR UNKNOWN_F732
-//	LDA #$C4
-//	LDX #$9E
-//	JSR UNKNOWN_149E2C
-//	LDX #$AF
-//	LDY #$9E
-//	JSR UNKNOWN_F732
-//	LDA #$EA
-//	LDX #$9E
-//	JSR UNKNOWN_149E2C
+void Title_Screen() @safe {
+
+	ClearSprites();
+	ClearTilemaps();
+
+
+
+	ram_PPUCTRL &= 0xFE;
+	scroll_x = 0;
+	scroll_y = 0;
+
+    BankswitchCHRFromTable(Title_CHR_Old);
+
+    LoadPaletteFrom(Title_Palette_Old);
+
+	OT0_DefaultTransition();
+
+    if (current_music != 0x16){
+    	soundqueue_track = 0x16;
+	}
+
+    fill_nmi_with_pointer_data(nmi_fill_map_with_palette_2);
+
+    DoIntroTransition(produced_by_tiles);
+
+    fill_nmi_with_pointer_data(nmi_fill_map_with_palette_2);
+
+    DoIntroTransition(presented_by_tiles);
+
 //	LDA #$8F
 //	STA $60
 //	LDA #$9E
 //	STA $61
-//	JSR UNKNOWN_F496
-//	JSR UNKNOWN_EDDC
+//	JSR LoadPaletteFrom
+//	JSR OT0_DefaultTransition
 //	LDA #$69
 //	LDX #$9E
 //	JSR UNKNOWN_CEE8
 //	LDA #$18
 //	LDX #$9F
-//	JSR UNKNOWN_149E44
+//	JSR load_tilemap_into_queue
 //	LDA #$00
 //	STA $60
 //	LDA #$10
@@ -1308,43 +1302,154 @@ void unknown1497A3() {
 //@UNKNOWN4:
 //	LDX #$00
 //	STX $DA
-//	JSR UNKNOWN_EDDC
+//	JSR OT0_DefaultTransition
 //	LDA #$19
 //	LDX #$FF
 //	LDY #$9F
 //	JSR UNKNOWN_FDF3
 //	RTS
+}
 
-//UNKNOWN_149E2C:
-//	JSR UNKNOWN_149E44
-//	LDX #$FF
-//	JSR UNKNOWN_149E54
-//	LDX #$40
-//	JSR UNKNOWN_149E54
-//	JSR UNKNOWN_EDDC
-//	LDX #$40
-//	JSR UNKNOWN_149E54
-//	JMP UNKNOWN_FD80
+void DoIntroTransition(ubyte[] tiles) @safe {
+	load_tilemap_into_queue(tiles);
+	AdvanceIfPressStart(255);
+  	AdvanceIfPressStart(64);
+	OT0_DefaultTransition();
+	version(original){
+  		AdvanceIfPressStart(80);
+	} else {
+  		AdvanceIfPressStart(64);
+	}
+	return ClearTilemaps();
+}
 
-//UNKNOWN_149E44:
-//	STA $74
-//	STX $75
-//@UNKNOWN0:
-//	JSR UNKNOWN_C6D2
-//	DEC $77
-//	CMP #$00
-//	BNE @UNKNOWN0
-//	JMP UNKNOWN_EE30
-//UNKNOWN_149E54:
-//	JSR UNKNOWN_FD41
-//	LDA $DE
-//	AND #$10
-//	EOR #$10
-//	BEQ @UNKNOWN2
-//	DEX
-//	BNE UNKNOWN_149E54
-//@UNKNOWN2:
-//	RTS
+void load_tilemap_into_queue(ubyte[] tiles) @safe {
+	tilepack_ptr = tiles;
+	while(DrawTilepack() != 0){
+		ntbl_y--;
+	}
+	return B31_0e30();
+}
 
-//UNKNOWN_149E63:
-//	.BYTE $42, $72, $7C, $7C, $40, $41, $42, $72, $7C, $41, $D8, $D9, $0F, $28, $30, $18, $0F, $21, $30, $12, $0F, $16, $30, $12, $0F, $3A, $30, $12, $0F, $21, $30, $12, $0F, $21, $30, $12, $0F, $21, $30, $12, $0F, $21, $30, $12, $0F, $21, $30, $16, $0F, $21, $30, $16, $0F, $21, $30, $16, $0F, $21, $30, $16, $0F, $21, $30, $12, $0F, $21, $30, $12, $0F, $21, $30, $12, $0F, $21, $30, $12, $08, $40, $23, $C0, $AA, $00, $07, $04, $23, $D2, $40, $23, $D3, $10, $23, $DA, $04, $23, $DB, $01, $00, $20, $0D, $0B, $C8, $C9, $CA, $CB, $CD, $CE, $CF, $01, $20, $0D, $0C, $D8, $01, $20, $13, $0C, $DF, $01, $20, $0D, $0D, $22, $CC, $13, $01, $20, $0D, $0F, $E3, $E4, $E5, $E6, $E7, $E8, $00, $20, $0D, $0B, $D9, $DA, $DB, $DC, $DD, $DE, $CE, $CF, $01, $20, $0D, $0C, $D8, $01, $20, $14, $0C, $DF, $01, $20, $00, $0D, $22, $CC, $15, $01, $20, $08, $0F, $F3, $F4, $F5, $F6, $F7, $F8, $F9, $FA, $FB, $FC, $FD, $FE, $FF, $00, $20, $08, $07, $90, $91, $92, $93, $94, $95, $96, $97, $98, $99, $9A, $9B, $9C, $01, $A0, $A1, $A2, $A3, $A4, $A5, $A6, $A7, $A8, $A9, $AA, $AB, $AC, $01, $B0, $B1, $B2, $B3, $B4, $B5, $B6, $B7, $B8, $B9, $BA, $BB, $BC, $BD, $BE, $BF, $01, $C0, $C1, $C2, $C3, $C4, $C5, $C6, $C7, $C8, $C9, $CA, $CB, $CC, $CD, $CE, $CF, $01, $D0, $D1, $D2, $D3, $D4, $D5, $D6, $D7, $D8, $D9, $DA, $DB, $DC, $DD, $DE, $01, $E0, $E1, $E2, $E3, $E4, $E5, $E6, $E7, $E8, $E9, $EA, $EB, $EC, $ED, $EE, $01, $F0, $F1, $F2, $F3, $F4, $F5, $F6, $F7, $F8, $F9, $FA, $FB, $FC, $FD, $FE, $01, $20, $07, $17, $43, $44, $45, $46, $47, $70, $69, $6A, $6B, $6C, $6D, $6E, $6F, $53, $54, $55, $56, $57, $00
+void AdvanceIfPressStart(ubyte count) @safe {
+	while(count > 0){
+		WaitNMI();
+		if (((pad1_hold & (1 << 4)) ^ (1 << 4)) == 0){
+			return;
+		}
+		count--;
+	}
+}
+
+ubyte[] Title_CHR_Old = [0x42, 0x72, 0x7c, 0x7c, 0x40, 0x41];
+
+ubyte[] Title_CHR = [0x42, 0x72, 0x7C, 0x41, 0xD8, 0xD9];
+
+ubyte[] Title_Palette_Old = [
+	0x0F, 0x28, 0x30, 0x18,
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x16, 0x30, 0x12,
+	0x0F, 0x3A, 0x30, 0x12,
+
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x21, 0x30, 0x12,
+];
+
+ubyte[] Title_Palette = [
+	0x0F, 0x21, 0x30, 0x16,
+	0x0F, 0x21, 0x30, 0x16,
+	0x0F, 0x21, 0x30, 0x16,
+	0x0F, 0x21, 0x30, 0x16,
+
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x21, 0x30, 0x12,
+	0x0F, 0x21, 0x30, 0x12,
+];
+
+ubyte[] nmi_fill_map_with_palette_2 = [
+	0x08,
+	0x40,
+	0x23,0xC0,
+	0xAA,
+	0x00,
+];
+
+ubyte[] B20_1EB5 = [
+	0x07,
+	0x04,
+	0x23,0xD2,
+	0x40,
+	0x23,0xD3,
+	0x10,
+	0x23,0xDA,
+	0x04,
+	0x23,0xDB,
+	0x01,
+	0x00,
+];
+
+ubyte[] produced_by_tiles = [
+0x20, 0x0D, 0x0B,
+0xC8, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF,
+0x01,
+0x20, 0x0D, 0x0C,
+0xD8,
+0x01,
+0x20, 0x13, 0x0C,
+0xDF,
+0x01,
+
+0x20, 0x0D, 0x0D,
+0x22, 0xCC, 0x13,
+0x01,
+
+0x20, 0x0D, 0x0F,
+0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8,
+0x00
+];
+
+ubyte[] presented_by_tiles = [
+0x20, 0x0D, 0x0B,
+0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xCE, 0xCF,
+0x01,
+0x20, 0x0D, 0x0C,
+0xD8,
+0x01,
+0x20, 0x14, 0x0C,
+0xDF,
+0x01,
+
+0x20, 0x00, 0x0D,
+0x22, 0xCC, 0x15,
+0x01,
+
+0x20, 0x08, 0x0F,
+0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF,
+0x00
+];
+
+ubyte[] title_screen_tiles = [
+0x20, 0x08, 0x07,
+0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C,
+0x01,
+0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC,
+0x01,
+0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,
+0x01,
+0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
+0x01,
+0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE,
+0x01,
+0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE,
+0x01,
+0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE,
+0x01,
+
+0x20, 0x07, 0x17,
+0x43, 0x44, 0x45, 0x46, 0x47, 0x70,
+0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x53, 0x54, 0x55, 0x56, 0x57,
+0x00
+];
