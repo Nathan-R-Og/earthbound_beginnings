@@ -10,8 +10,20 @@ import earthboundbeginnings.constant;
 import earthboundbeginnings.ram;
 
 //assets
+import earthboundbeginnings.chr.tilesets;
+import earthboundbeginnings.chr.enemies;
 import earthboundbeginnings.chr.bank8;
-alias loadableDataModules = AliasSeq!(earthboundbeginnings.chr.bank8);
+import earthboundbeginnings.chr.characters;
+import earthboundbeginnings.chr.bankf;
+import earthboundbeginnings.chr.us;
+alias loadableDataModules = AliasSeq!(
+	earthboundbeginnings.chr.tilesets,
+	earthboundbeginnings.chr.enemies,
+	earthboundbeginnings.chr.bank8,
+	earthboundbeginnings.chr.characters,
+	earthboundbeginnings.chr.bankf,
+	earthboundbeginnings.chr.us
+);
 
 void main(string[] args) {
 	nes.entryPoint = &Reset_Vector;

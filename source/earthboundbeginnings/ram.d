@@ -189,20 +189,27 @@ ubyte ram_PPUMASK; // $fe
 ubyte ram_PPUCTRL; // $ff
 
 struct Vector2B {
-    ubyte x_vel;
-    ubyte y_vel;
+    ubyte x;
+    ubyte y;
 }
 
 struct SpriteTile {
 	Vector2B position;
-	ubyte attr;
+    ubyte palette;
+	ubyte tile_id_is_relative;
+	ubyte priority;
+	ubyte flipX;
+	ubyte flipY;
 	ubyte id;
 }
 
 struct SpritePointerDef {
-	SpriteTile* pointer;
+	SpriteTile[]* pointer;
 	ubyte base_tile_id;
-	ubyte palettes;
+	ubyte p1;
+	ubyte p2;
+	ubyte p3;
+	ubyte p4;
 }
 
 // *** RAM DEFINES ***
@@ -217,9 +224,17 @@ struct SpriteObject {
 	ubyte oam_slot_flags;
 	Vector2B position;
 	Vector2B velocity;
-	Vector2B shake;
+	Vector2B[] shake;
 	SpritePointerDef* spriteDef;
 }
+
+// SpriteObject::count_flags bit masks
+enum SPRITE_OBJECT_COUNT_MASK = 0x3F;
+enum SPRITE_OBJECT_CF_BIT6 = 0x40; // something related to walking frame?
+enum SPRITE_OBJECT_OFFSCREEN_X_DIR = 0x80;
+// SpriteObject::oam_slot_flags bit masks
+enum SPRITE_OBJECT_SHAKE_ENABLED = 0x40;
+enum SPRITE_OBJECT_OFFSCREEN_Y_DIR = 0x80;
 SpriteObject[32] SPRITE_OBJECTS;
 ubyte[0x100] nmi_queue;
 
@@ -227,6 +242,159 @@ ubyte[0x20] palette_queue;
 ubyte[0x20] palette_backup;
 ubyte[0x40] irq_pointers;
 
+
+ubyte[] currptr_pulse0; // $780
+ubyte[] currptr_pulse0_blank; // $782
+ubyte[] currptr_pulse1; // $0784
+ubyte[] currptr_pulse1_blank; // $0786
+ubyte[] currptr_triangle; // $0788
+ubyte[] currptr_triangle_blank; // $078A
+// Noise & DPCM ptr is read straight from MusicHeader
+ubyte[] current_music_blank; // $078E
+
+
+//unk_786 = currptr_pulse1_blank
+//unk_78a = currptr_triangle_blank
+//unk_78b = currptr_triangle_blank+1
+
+// Length    = 10 bytes
+// Music Header data from ROM is copied to here
+// Format:
+//   $0      : (signed) KeySig Modifier ($02 = 1 Half Step)
+//   $1      : Tempo (Based on LUT)
+//   $2, $3  : PTR to Pulse 0 data start
+//   $4, $5  : PTR to Pulse 1 data start
+//   $6, $7  : PTR to Triangle data start
+//   $8, $9  : PTR to Noise & DPCM data
+//       DPCM uses upper 2 bits of a byte for data to rep. what sample to play (Snare and Kick Drum, don't remember which is which)
+//       Noise uses the rest of the bits
+
+struct Music_Header {
+    ubyte transpose; // Music transpose
+    ubyte[] note_lengths;
+    ubyte[] ME_Pulse1Channel;
+    ubyte[] ME_Pulse2Channel;
+    ubyte[] ME_TriangleChannel;
+    ubyte[] ME_NoiseChannel;
+}
+
+// MusicHeader: // $0790
+//     ME_Transpose: .res 1 // Music transpose
+//     ME_NoteLengthOffset: .res 1 // $0791 / Music note length table offset
+//     ME_DataPointer: // $0792 / Music channel music data pointer (2 bytes per channel)
+//     ME_Pulse1Channel: .res 2
+//     ME_Pulse2Channel: .res 2
+//     ME_TriangleChannel: .res 2
+//     ME_NoiseChannel: .res 2
+
+// ME_Envelopes: // $079a
+ubyte[] ME_Envelopes0 = [0,0,0];
+ubyte[] ME_Envelopes1 = [0,0,0]; // $079D
+
+// //guess
+// ME_CurrentPhrases: // $07a0
+//     ME_CurrentPulse1Phrase: .res 2
+//     ME_CurrentPulse2Phrase: .res 2 // $07a2
+//     ME_CurrentTrianglePhrase: .res 2 // $07a4
+//     ME_CurrentNoisePhrase: .res 2 // $07a6
+
+// //guess
+// //if looped, sets head to loop point
+// ME_CurrentPhraseIndex: // $07a8
+//     ME_Pulse1Index: .res 1
+//     ME_Pulse2Index: .res 1 // $07a9
+//     ME_TriangleIndex: .res 1 // $07aa
+//     ME_NoiseIndex: .res 1 // $07ab
+
+// // Music Channel variables
+// // RAM reserved for the music engine to do its thing
+// // Length    = 4 bytes each
+// // Format:
+// //   $0 : Pulse 0
+// //   $1 : Pulse 1
+// //   $2 : Triangle
+// //   $3 : Noise & DPCM
+
+// // Current Offset in Channel Music Banks
+// MusicChannel_Counter: .res 4 // $07AC / Music channel music data offset (added to $0792[x])
+// MusicChannel_LSOffset: .res 4 // $07B0 / Music channel loop start offset
+// MusicChannel_NoteLengthCounter: .res 4 // $07B4 / Music channel note length counter
+// MusicChannel_NewNoteLength: .res 4 // $07B8 / Music channel new note length
+// MusicChannel_LoopCounter: .res 4 // $07BC / Music channel loop counter
+ubyte[30] UNK_7C0; // $07C0 = Music channel sweep ($4001/$4005), not used for triangle and noise since sweep only exists for pulse
+// unk_7c3 = $07c3
+// unk_7c7 = $07c7
+ubyte unk_7c8; // $07c8
+ubyte unk_7c9; // $07c9
+ubyte unk_7ca; // $07ca
+ubyte music_id; // $07CC = Current music ID (gets value from $07F5 minus one)
+// unk_7cd = $07cd
+
+// unk_7d1 = $07d1
+// unk_7d5 = $07d5
+// unk_7d6 = $07d6
+// unk_7d9 = $07d9
+// unk_7da = $07da
+// unk_7de = $07de
+// unk_7df = $07df
+
+// sfx_framecounter = $07e0
+// unk_7e2 = $07e2
+// unk_7e3 = $07e3
+// unk_7e4 = $07e4
+// unk_7e6 = $07e6
+// unk_7e7 = $07e7
+// unk_7e8 = $07e8
+
+// sram_mode = $07ef
+
+// // Sounds
+// // direct sfx (put into soundqueues)
+// // $0 : noise
+// // this is the only one directly used by battle engine bank
+// Noise_Hit                   = 1
+// Noise_Bomb                  = 2
+// Noise_Thunder               = 3
+// Noise_Fire                  = 4
+// Noise_Crit                  = 5
+// Noise_EnemyKilled           = 6
+// Noise_Junk                  = 7 // $7 not used (plays junk data)
+// Noise_Stairs                = 8
+// Noise_Rocket                = 9
+// Noise_RocketLand            = $A
+// // $1 : pulses group 0
+// PulseG0_EnemyAttack         = 1
+// PulseG0_Beam                = 2
+// PulseG0_StatBoost           = 3
+// PulseG0_TakeDamage          = 4
+// PulseG0_MenuBloop           = 5
+// PulseG0_ItemDropGet         = 6
+// PulseG0_Recovery            = 7
+// PulseG0_Canary              = 8
+// PulseG0_LearnedPSI          = 9
+// PulseG0_PlayerAttack        = $a
+// PulseG0_Purchase            = $b
+// PulseG0_Dodge               = $c
+// PulseG0_Unk                 = $d
+// PulseG0_LowMenuBloop        = $e //(unused)
+// // PulseG0_HighMenuBloop = $f (unused)
+// PulseG0_Miss                = $f
+// PulseG0_MagicantWarp        = $10
+// PulseG0_Laura               = $11   // plays canary then swaps track to 2nd melody (doesnt change track back)
+// PulseG0_XXStone             = $12
+// // $2 : unused
+// // $3 : triangle
+// Triangle_Freeze             = 1    // also used for teleport
+// Triangle_Junk               = 2    // $2 plays junk
+// Triangle_PlayerKilled       = 3
+// Triangle_Equip              = 4
+// // $4 pulse group 1
+// PulseG1_DimensionSlip       = 1    // also used for teleport
+// PulseG1_Status              = 2
+// PulseG1_GiegueAttack        = 3
+// // $5 : track
+// Track_LevelUp               = $1f
+// Track_Clear                 = $ff
 
 ubyte[0x100] unk0700;
 ubyte soundqueue_noise; //$07F0
@@ -239,7 +407,25 @@ ubyte soundqueue_track; //$07F5
 ubyte current_music;
 ubyte sram_mode;
 
+ubyte UNK_7f6;
+
+ubyte disable_dmc; // $07F7 / If not zero, DMC is disabled
+
+
+// Same format as soundqueue. Holds the current playing SFX/Track until it ends. Almost all tracks don't "end," but loop a large number of times, so the value gets stuck in there, effectively making it a clone of curr_track_id
+//soundactive: ; $07F8
+ubyte soundactive_noise;
+ubyte soundactive_pulseg0; // $07F9
+ubyte soundactive_unknown; // $07FA
+ubyte soundactive_triangle; // $07FB
+ubyte soundactive_pulseg1; // $07FC
+ubyte soundactive_track; // $07FD
+
+ubyte UNK_7FE;
+ubyte unk_7ff;
+
 // *** SRAM DEFINES ***
+ubyte pc_count; // $6707
 
 struct party_info {
     ubyte unk_0;

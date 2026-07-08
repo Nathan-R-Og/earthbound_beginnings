@@ -252,7 +252,7 @@ void unknown13A178() @safe {
 //	LDA #$19
 //	LDX #$6D
 //	LDY #$A3
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	JMP UNKNOWN_C3F4
 
 /**
@@ -1399,7 +1399,7 @@ void unknown13A82F() @safe {
 //UNKNOWN_13A9D6:
 //	JSR UNKNOWN_13AB3E
 //	JSR UNKNOWN_E772
-//	AND UNKNOWN_EC5D,X
+//	AND All_Bits,X
 //	BNE @UNKNOWN0
 //	LDA #$04
 //	JSR UNKNOWN_E2C2
@@ -1451,7 +1451,7 @@ void unknown13A82F() @safe {
 //UNKNOWN_13AA3F:
 //	JSR UNKNOWN_FDE7
 //	JSR UNKNOWN_E772
-//	ORA UNKNOWN_EC5D,X
+//	ORA All_Bits,X
 //	STA $7620,Y
 //	JMP UNKNOWN_FDED
 
@@ -1964,7 +1964,7 @@ void unknown13AB53() @safe {
 //UNKNOWN_13AE23:
 //	JSR UNKNOWN_FDE7
 //	JSR UNKNOWN_13AE58
-//	ORA UNKNOWN_EC5D,X
+//	ORA All_Bits,X
 //	STA $7600,Y
 //	LDY $35
 //	INY
@@ -1973,8 +1973,8 @@ void unknown13AB53() @safe {
 //UNKNOWN_13AE35:
 //	JSR UNKNOWN_FDE7
 //	JSR UNKNOWN_13AE58
-//	ORA UNKNOWN_EC5D,X
-//	EOR UNKNOWN_EC5D,X
+//	ORA All_Bits,X
+//	EOR All_Bits,X
 //	STA $7600,Y
 //	LDY $35
 //	INY
@@ -1983,8 +1983,8 @@ void unknown13AB53() @safe {
 //UNKNOWN_13AE4A:
 //	JSR UNKNOWN_13AE58
 //	LDY $35
-//	AND UNKNOWN_EC5D,X
-//	EOR UNKNOWN_EC5D,X
+//	AND All_Bits,X
+//	EOR All_Bits,X
 //	JMP UNKNOWN_13AC86
 
 //UNKNOWN_13AE58:
@@ -3284,7 +3284,7 @@ void unknown13AB53() @safe {
 //	LDA #$19
 //	LDX #$C1
 //	LDY #$A6
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	LDY $35
 //	INY
 //	RTS
@@ -3353,7 +3353,7 @@ void unknown13AB53() @safe {
 //	LDA #$19
 //	LDX #$CB
 //	LDY #$A5
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	JSR UNKNOWN_13AB41
 //	LDY $35
 //	INY
@@ -3364,7 +3364,7 @@ void unknown13AB53() @safe {
 //	LDA #$19
 //	LDX #$C0
 //	LDY #$A6
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	JSR UNKNOWN_13AB41
 //	LDY $35
 //	INY
@@ -3642,7 +3642,7 @@ void unknown13AB53() @safe {
 //	LSR
 //	TAY
 //	LDA ($84),Y
-//	AND UNKNOWN_EC5D,X
+//	AND All_Bits,X
 //	LDX $64
 //	AND UNKNOWN_13B98B,Y
 //	BEQ @UNKNOWN1
@@ -4174,7 +4174,7 @@ void OverworldTransitionIntepreter() @safe {
 //	LDA #$19
 //	LDX #$F7
 //	LDY #$A1
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //@UNKNOWN0:
 //	LDX #$3C
 //	JMP WaitXFrames_Min1

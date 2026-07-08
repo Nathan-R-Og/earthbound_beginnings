@@ -1,20 +1,20 @@
 module earthboundbeginnings.music;
 
 import earthboundbeginnings.external;
+import earthboundbeginnings.ram;
 
-//Music_Tick:
-//	JMP UNKNOWN_1C8277
+void Music_Tick() @safe {
+	B28_0277();
+}
+
 //UNKNOWN_1C8003:
-//	JMP UNKNOWN_1C8299
+//	JMP B28_0299
 
 /**
  * Original_Address: $(DOLLAR) $8006, bank $1C
  */
 void Music_Init() @safe {
-	version(audio) {
-		assert(0, "NYI");
-	}
-	//	JMP UNKNOWN_1C8216
+	return B28_0216();
 }
 
 //UNKNOWN_1C8009:
@@ -120,7 +120,7 @@ void Music_Init() @safe {
 //	BNE @UNKNOWN1
 //	RTS
 
-//UNKNOWN_1C80BC:
+//TickRNG:
 //	LDA $BB
 //	AND #$02
 //	STA UNKNOWN_07FF
@@ -248,24 +248,24 @@ void Music_Init() @safe {
 //UNKNOWN_1C81AC:
 //	.BYTE $03, $7F, $38, $28
 
-//UNKNOWN_1C81B0:
+//HandleTriangleSFX:
 //	LDX #$03
 //	LDA #.LOBYTE(UNKNOWN_1C8079)
 //	LDY #$81
 //	BNE UNKNOWN0_1C81D3
-//UNKNOWN_1C81B8:
+//HandlePulseGroup1SFX:
 //	LDX #$04
 //	LDA #.LOBYTE(UNKNOWN_1C8089)
 //	LDY #$8F
 //	BNE UNKNOWN0_1C81D3
-//UNKNOWN_1C81C0:
+//HandlePulseGroup0SFX:
 //	LDA UNKNOWN_07F8+4
 //	BNE UNKNOWN_1C81B0_RET
 //	LDX #$01
 //	LDA #.LOBYTE(UNKNOWN_1C8031)
 //	LDY #$55
 //	BNE UNKNOWN0_1C81D3
-//UNKNOWN_1C81CD:
+//HandleNoiseSFX:
 //	LDX #$00
 //	LDA #.LOBYTE(UNKNOWN_1C8009)
 //	LDY #$1D
@@ -306,25 +306,27 @@ void Music_Init() @safe {
 //	BEQ UNKNOWN_1C81B0_RET
 //	STY $B0
 //	BNE UNKNOWN0_1C81DC
-//UNKNOWN_1C8216:
-//	LDA #$0F
-//	STA SND_CHN
-//	LDA #$55
-//	STA $BB
-//	LDA #$00
-//	STA $0786
-//	STA $078B
-//	TAY
-//@UNKNOWN2:
-//	LDA UNKNOWN_1C80E6,Y
-//	STA $076C,Y
-//	INY
-//	TYA
-//	CMP #$14
-//	BNE @UNKNOWN2
-//	JSR UNKNOWN_1C8299
-//UNKNOWN_1C81B0_RET:
-//	RTS
+
+void B28_0216() @safe {
+    nes.SND_CHN = 0xf;
+    unk_bb[0] = 0x55;
+
+    currptr_pulse1_blank = [];
+    currptr_triangle_blank = [];
+
+    //copy Ocarina_Missing_List to ntbl_xc
+    // ubyte temp_y = 0;
+    // @copy:
+    // lda Ocarina_Missing_List, y
+    // sta ntbl_xc, y
+    // iny
+    // tya
+    // cmp #10*2
+    // bne @copy
+
+    return B28_0299();
+}
+
 
 //UNKNOWN_1C8238:
 //	.WORD UNKNOWN_1C935A
@@ -336,7 +338,34 @@ void Music_Init() @safe {
 //	.WORD UNKNOWN_1C939E
 //	.WORD UNKNOWN_1C93AA
 
-//UNKNOWN_1C8248:
+void B28_0248() @safe{
+	//ocarina handler probably
+    // unk_b0 = learned_melodies;
+	// ubyte temp_y = 0;
+    // goto B28_025d
+    // @B28_0251:
+    // lda #<mus_ocarina_missing
+    // sta ntbl_xe, y
+    // iny
+    // lda #>mus_ocarina_missing
+    // sta ntbl_xe, y
+    // iny
+    // B28_025d:
+    // tya
+    // cmp #$10
+    // beq @B28_0276
+    // lsr unk_b0
+    // bcc @B28_0251
+    // lda B28_0238, y
+    // sta ntbl_xe, y
+    // iny
+    // lda B28_0238, y
+    // sta ntbl_xe, y
+    // iny
+    // bne @B28_025d
+    // @B28_0276:
+}
+
 //	LDA $761E
 //UNKNOWN_1C824B:
 //	STA $B0
@@ -365,59 +394,60 @@ void Music_Init() @safe {
 //@UNKNOWN2:
 //	RTS
 
-//UNKNOWN_1C8277:
-//	LDA #$C0
-//	STA JOY2
-//	JSR UNKNOWN_1C80BC
-//	JSR UNKNOWN_1C81CD
-//	JSR UNKNOWN_1C81B8
-//	JSR UNKNOWN_1C81B0
-//	JSR UNKNOWN_1C81C0
-//	JSR UNKNOWN_1C8911
-//	LDA #$00
-//	LDX #$06
-//@UNKNOWN0:
-//	STA UNKNOWN_07EF,X
-//	DEX
-//	BNE @UNKNOWN0
-//	RTS
+void B28_0277() @safe {
+	//APU "frame counter". Select "one 5-step sequence" (whatever that means) and clear interrupt flag
+    nes.JOY2 = 0xc0;
 
-//UNKNOWN_1C8299:
-//	JSR UNKNOWN_1C82A8
-//UNKNOWN_1C829C:
-//	JSR UNKNOWN_1C82C6
-//	LDA #$00
-//	STA DMC_RAW
-//	STA $079C
-//	RTS
+    //TickRNG();
+    //HandleNoiseSFX();
+    //HandlePulseGroup1SFX();
+    //HandleTriangleSFX();
+    //HandlePulseGroup0SFX();
+    HandleMusic();
 
-//UNKNOWN_1C82A8:
-//	LDA #$00
-//	STA UNKNOWN_07C7+1
-//	STA UNKNOWN_07C7+2
-//	STA UNKNOWN_07C7+3
-//	STA $078C
-//	STA $078A
-//	TAY
-//@UNKNOWN0:
-//	LDA #$00
-//	STA UNKNOWN_07F8,Y
-//	INY
-//	TYA
-//	CMP #$06
-//	BNE @UNKNOWN0
-//	RTS
+	soundqueue_noise = 0;
+	soundqueue_pulseg0 = 0;
+	soundactive_unk = 0;
+	soundqueue_triangle = 0;
+	soundqueue_pulseg1 = 0;
+	soundqueue_track = 0;
+}
 
-//UNKNOWN_1C82C6:
-//	LDA #$00
-//	STA DMC_RAW
-//	LDA #$10
-//	STA SQ1_VOL
-//	STA SQ2_VOL
-//	STA NOISE_VOL
-//	LDA #$00
-//	STA TRI_LINEAR
-//	RTS
+void B28_0299() @safe {
+    B28_02a8();
+	return B28_029c();
+}
+//fallthrough
+void B28_029c() @safe {
+    B28_02c6();
+    nes.DMC_RAW = 0;
+    ME_Envelopes0[2] = 0;
+}
+
+void B28_02a8() @safe {
+    unk_7c8 = 0;
+    unk_7c9 = 0;
+    unk_7ca = 0;
+
+    current_music = 0;
+    currptr_triangle_blank = [];
+    // Set all sounds and music to be inactive
+
+	soundqueue_noise = 0;
+	soundqueue_pulseg0 = 0;
+	soundactive_unk = 0;
+	soundqueue_triangle = 0;
+	soundqueue_pulseg1 = 0;
+	soundqueue_track = 0;
+}
+
+void B28_02c6() @safe {
+    nes.DMC_RAW = 0;
+    nes.SQ1_VOL = 0x10;
+    nes.SQ2_VOL = 0x10;
+    nes.NOISE_VOL = 0x10;
+    nes.TRI_LINEAR = 0;
+}
 
 //UNKNOWN_1C82DC:
 //	LDX $BD
@@ -1257,60 +1287,71 @@ void Music_Init() @safe {
 //	LDY #$AC
 //	JMP UNKNOWN_1C8099
 
-//UNKNOWN_1C8903:
-//	JSR UNKNOWN_1C8248
-//	LDA #$01
-//	STA $078C
-//	JMP UNKNOWN_1C8946
+void B28_0903() @safe {
+    B28_0248();
+    current_music = 1;
+    B28_0946(1);
+}
 
-//UNKNOWN_1C890E:
-//	JMP UNKNOWN_1C8299
+void B28_090e() @safe {
+    return B28_0299();
+}
 
-//UNKNOWN_1C8911:
-//	LDA UNKNOWN_07F5
-//	TAY
-//	CMP #$3F
-//	BCS UNKNOWN_1C890E
-//	CMP #$01
-//	BEQ UNKNOWN_1C8903
-//	TYA
-//	BEQ UNKNOWN_1C895C
-//	STA $078C
-//	CMP #$19
-//	BEQ UNKNOWN_1C892B
-//	CMP #$19
-//	BCC UNKNOWN_1C8936
-//UNKNOWN_1C892B:
-//	STA $BF
-//	SEC
-//	SBC #$19
-//	STA UNKNOWN_07CC
-//	JMP UNKNOWN_1C894E
-//UNKNOWN_1C8936:
-//	CMP #$06
-//	BNE UNKNOWN_1C8946
-//	LDA $6707
-//	CMP #$01
-//	BEQ UNKNOWN_1C8945
-//	LDA #$07
-//	BNE UNKNOWN_1C8946
-//UNKNOWN_1C8945:
-//	TYA
-//UNKNOWN_1C8946:
-//	STA $BF
-//	STA UNKNOWN_07CC
-//	DEC UNKNOWN_07CC
-//UNKNOWN_1C894E:
-//	LDA #$7F
-//	STA UNKNOWN_07C0
-//	STA UNKNOWN_07C1
-//	JSR UNKNOWN_1C8AEC
-//UNKNOWN_1C8959:
-//	JMP UNKNOWN_1C8C7B
-//UNKNOWN_1C895C:
-//	LDA UNKNOWN_07F8+5
-//	BNE UNKNOWN_1C8959
-//	RTS
+void HandleMusic() @safe {
+	ubyte temp_a = soundqueue_track;
+	ubyte temp_y = temp_a;
+	if (temp_a >= 0x3f){
+		return B28_090e();
+	}
+	if (temp_a == 1){
+		return B28_0903();
+	}
+	temp_a = temp_y;
+	if (temp_a == 0){
+		return B28_095c();
+	}
+	current_music = temp_a;
+	if ((temp_a < 0x19) || (temp_a  == 0x19)){
+		unk_bf = temp_a;
+		temp_a -= 0x19;
+		music_id = temp_a;
+		return B28_094e();
+	}
+    //if playing pollyanna, check if need to play bein friends instead
+	if (temp_a != 6){
+		return B28_0946(temp_a);
+	}
+    //if party count != 1, play bein friends
+    if (pc_count == 1){
+		return B28_0946(7);
+	}
+	return B28_0946(temp_y);
+}
+
+void B28_0946(ubyte a) @safe {
+    unk_bf = a;
+    music_id = a;
+    music_id--;
+	return B28_094e();
+}
+
+void B28_094e() @safe {
+    UNK_7C0[0] = 0x7f;
+    UNK_7C0[1] = 0x7f;
+    B28_0aec();
+	return B28_0959();
+}
+
+void B28_0959() @safe {
+	//return B28_0c7b();
+}
+
+void B28_095c() @safe {
+	if (soundactive_track != 0){
+		return B28_0959();
+	}
+	return;
+}
 
 //UNKNOWN_1C8962:
 //	LDA #$03
@@ -1505,22 +1546,76 @@ void Music_Init() @safe {
 //	STA UNKNOWN_07A0,X
 //	JMP UNKNOWN_1C8B65
 
-//UNKNOWN_1C8AEC:
-//	JSR UNKNOWN_1C829C
-//	LDA $BF
-//	STA UNKNOWN_07F8+5
-//	CMP #$32
-//	BEQ UNKNOWN_1C8B06
-//	CMP #$19
-//	BEQ UNKNOWN_1C8B00
-//	CMP #$19
-//	BCC UNKNOWN_1C8B1A
-//UNKNOWN_1C8B00:
-//	JSR UNKNOWN_1C8ACC
-//	JMP UNKNOWN_1C8B31
-//UNKNOWN_1C8B06:
-//	LDX #$00
-//	LDY #$00
+void B28_0aec() @safe {
+	B28_029c();
+	ubyte temp_a = unk_bf;
+	ubyte temp_x = 0;
+	ubyte temp_y = 0;
+    soundactive_track = temp_a;
+	if (temp_a == 0x32){
+		while(temp_x != 10){
+			//lda Path_To_Giegue_BGM_header, y
+			//sta ME_Transpose, x
+			temp_y++;
+			temp_x++;
+			temp_a = temp_x;
+		}
+	} else if (temp_a >= 0x19){
+		//jsr B28_0acc
+	} else {
+		temp_a = music_id;
+		temp_y = temp_a;
+		// lda Music_Table_Ids, y
+		temp_y = temp_a;
+		temp_x = 0;
+		while(temp_x != 10){
+			// lda Music_Table, y
+			// sta ME_Transpose, x
+			temp_y++;
+			temp_x++;
+			temp_a = temp_x;
+		}
+	}
+    // lda #1
+    // sta MusicChannel_NoteLengthCounter
+    // sta MusicChannel_NoteLengthCounter+1
+    // sta MusicChannel_NoteLengthCounter+2
+    // sta MusicChannel_NoteLengthCounter+3
+    // lda #0
+    // sta unk_ba
+    // ldy #8
+    // B28_0b45:
+    // sta ME_CurrentNoisePhrase+1, y
+    // dey
+    // bne B28_0b45
+    // tax
+    // B28_0b4c:
+    // //store datapointer lo
+    // lda ME_DataPointer, x
+    // sta unk_b6
+
+    // //check datapointer hi if ff, else store
+    // lda ME_DataPointer+1, x
+    // cmp #$ff
+    // beq B28_0ae4
+    // //store
+    // sta unk_b6+1
+
+    // ldy ME_CurrentPhraseIndex
+
+    // //get phrase pointers from pointer
+    // lda (unk_b6), y
+    // sta ME_CurrentPhrases, x
+    // iny
+    // lda (unk_b6), y
+    // B28_0b65:
+    // sta ME_CurrentPhrases+1, x
+
+    // inx
+    // inx
+    // txa
+    // cmp #8
+    // bne B28_0b4c
 //UNKNOWN_1C8B0A:
 //	LDA UNKNOWN_1C92F8,Y
 //	STA $0790,X
@@ -1577,7 +1672,7 @@ void Music_Init() @safe {
 //	TXA
 //	CMP #$08
 //	BNE UNKNOWN_1C8B4C
-//	RTS
+}
 
 //UNKNOWN_1C8B70:
 //	LDA $078A
@@ -1687,7 +1782,7 @@ void Music_Init() @safe {
 //	STA UNKNOWN_07A8,X
 //	JMP UNKNOWN_1C8C53
 //UNKNOWN_1C8C36:
-//	JSR UNKNOWN_1C8299
+//	JSR B28_0299
 //UNKNOWN_1C8C39:
 //	RTS
 
@@ -2173,363 +2268,468 @@ void Music_Init() @safe {
 
 //UNKNOWN_1C9074:
 //	.BYTE $04, $08, $10, $20, $40, $18, $30, $0C, $0A, $05, $02, $01, $05, $0A, $14, $28, $50, $1E, $3C, $0F, $0C, $06, $03, $02, $06, $0C, $18, $30, $60, $24, $48, $12, $10, $08, $03, $01, $04, $02, $00, $90, $07, $0E, $1C, $38, $70, $2A, $54, $15, $12, $09, $03, $01, $02, $08, $10, $20, $40, $80, $30, $60, $18, $15, $0A, $04, $01, $02, $C0, $09, $12, $24, $48, $90, $36, $6C, $1B, $18, $0A, $14, $28, $50, $A0, $3C, $78, $1E, $1A, $0D, $05, $01, $02, $17, $0B, $16, $2C, $58, $B0, $42, $84, $21, $1D, $0E, $05, $01, $02, $17
+// Music_Table_Ids:
+//     header_offset Ocarina_header
+//     header_offset Flippant_Battle_header
+//     header_offset Dangerous_Battle_header
+//     header_offset Hippie_Battle_header
+//     header_offset Win_Battle_header
+//     header_offset Pollyanna_header
+//     header_offset Bein_Friends_header
+//     header_offset Yucca_Desert_header
+//     header_offset Magicant_BGM_header
+//     header_offset Snowman_BGM_header
+//     header_offset Mt_Itoi_BGM_header
+//     header_offset Factory_BGM_header
+//     header_offset Ghastly_Site_header
+//     header_offset Twinkle_Elementary_BGM_header
+//     header_offset Humoresque_Of_A_Little_Dog_header
+//     header_offset Poltergeist_header
+//     header_offset Underground_BGM_header
+//     header_offset Home_BGM_header
+//     header_offset Approaching_Mt_Itoi_header
+//     header_offset Paradise_Line_BGM_header
+//     header_offset Fallin_Love_header
+//     header_offset Mother_Earth_header
+//     header_offset Tank_BGM_header
+//     header_offset Monkey_Cave_BGM_header
+// .define header_offset2(ta) .byte ta-Music_Table_2
+// Music_Table_2_Ids:
+//     header_offset2 Queen_Marys_Song_header
+//     header_offset2 Wisdom_Of_The_World_header
+//     header_offset2 Tombstone_BGM_header
+//     header_offset2 Game_Over_BGM_header
+//     header_offset2 Big_Victory_BGM_header
+//     header_offset2 Airplane_BGM_header
+//     header_offset2 Level_Up_BGM_header
+//     header_offset2 Recovery_BGM_header
+//     header_offset2 Fanfare_BGM_header
+//     header_offset2 Live_House_BGM_header
+//     header_offset2 All_That_I_Needed_Was_You_header
 
-//UNKNOWN_1C90DC:
-//	.BYTE UNKNOWN_1C910E - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9118 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9122 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C912C - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9136 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C914A - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9140 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9154 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C915E - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9168 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9172 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C917C - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9186 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C9190 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C919A - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91A4 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91AE - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91B8 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91C2 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91CC - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91D6 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91E0 - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91EA - UNKNOWN_1C910E
-//	.BYTE UNKNOWN_1C91F4 - UNKNOWN_1C910E
+//     header_offset2 Melody_1_header
+//     header_offset2 Melody_2_header
+//     header_offset2 Melody_3_header
+//     header_offset2 Melody_4_header
+//     header_offset2 Melody_5_header
+//     header_offset2 Melody_6_header
+//     header_offset2 Melody_7_header
+//     header_offset2 Melody_8_header
 
-//UNKNOWN_1C90F4:
-//	.BYTE UNKNOWN_1C91FE - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9208 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9212 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C921C - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9226 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9230 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C923A - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9244 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C924E - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9258 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9262 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C926C - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9276 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9280 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C928A - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C9294 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C929E - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92A8 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92B2 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92BC - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92C6 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92D0 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92DA - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92E4 - UNKNOWN_1C91FE
-//	.BYTE UNKNOWN_1C92EE - UNKNOWN_1C91FE
-//	.BYTE $00
+//     header_offset2 VS_Giegue_BGM_header
+//     header_offset2 Ending_JP_BGM_header
+//     header_offset2 Zoo_BGM_header
+//     header_offset2 Phone_BGM_header
+//     header_offset2 Youngtown_BGM_header
+//     header_offset2 Cave_Of_The_Tail_BGM_header
 
-//UNKNOWN_1C910E:
-//	.BYTE $18, $18
-//	.WORD $FFFF
-//	.WORD $FFFF
-//	.WORD $076C
-//	.WORD $FFFF
-//UNKNOWN_1C9118:
-//	.BYTE $00, $28
-//	.WORD UNKNOWN_1C93B2
-//	.WORD UNKNOWN_1C93BA
-//	.WORD UNKNOWN_1C93C4
-//	.WORD UNKNOWN_1C93D6
-//UNKNOWN_1C9122:
-//	.BYTE $00, $28
-//	.WORD UNKNOWN_1C9617
-//	.WORD UNKNOWN_1C9621
-//	.WORD UNKNOWN_1C962B
-//	.WORD UNKNOWN_1C9633
-//UNKNOWN_1C912C:
-//	.BYTE $00, $28
-//	.WORD UNKNOWN_1C9847
-//	.WORD UNKNOWN_1C9851
-//	.WORD UNKNOWN_1C985B
-//	.WORD UNKNOWN_1C9867
-//UNKNOWN_1C9136:
-//	.BYTE $00, $00
-//	.WORD UNKNOWN_1C9A03
-//	.WORD UNKNOWN_1C9A07
-//	.WORD UNKNOWN_1C9A09
-//	.WORD $FFFF
-//UNKNOWN_1C9140:
-//	.BYTE $00, $28
-//	.WORD UNKNOWN_1C9E2D
-//	.WORD UNKNOWN_1C9E39
-//	.WORD UNKNOWN_1C9E45
-//	.WORD UNKNOWN_1C9E51
-//UNKNOWN_1C914A:
-//	.BYTE $00, $35
-//	.WORD UNKNOWN_1C9BB7
-//	.WORD UNKNOWN_1C9BC1
-//	.WORD UNKNOWN_1C9BCB
-//	.WORD UNKNOWN_1C9BD3
-//UNKNOWN_1C9154:
-//	.BYTE $81, $0C
-//	.WORD UNKNOWN_1C9A38
-//	.WORD UNKNOWN_1C9A40
-//	.WORD UNKNOWN_1C9A48
-//	.WORD UNKNOWN_1C9A50
-//UNKNOWN_1C915E:
-//	.BYTE $00, $4C
-//	.WORD $A12C
-//	.WORD $A134
-//	.WORD $A13A
-//	.WORD $A148
-//UNKNOWN_1C9168:
-//	.BYTE $00, $35
-//	.WORD $A21A
-//	.WORD $A230
-//	.WORD $A236
-//	.WORD $FFFF
-//UNKNOWN_1C9172:
-//	.BYTE $00, $4C
-//	.WORD $A36D
-//	.WORD $A373
-//	.WORD $A379
-//	.WORD $A37F
-//UNKNOWN_1C917C:
-//	.BYTE $00, $35
-//	.WORD $A737
-//	.WORD $A72F
-//	.WORD $A741
-//	.WORD $A749
-//UNKNOWN_1C9186:
-//	.BYTE $00, $35
-//	.WORD $A425
-//	.WORD $A42D
-//	.WORD $A435
-//	.WORD $A43D
-//UNKNOWN_1C9190:
-//	.BYTE $00, $18
-//	.WORD $A529
-//	.WORD $A52F
-//	.WORD $A535
-//	.WORD $A53B
-//UNKNOWN_1C919A:
-//	.BYTE $00, $18
-//	.WORD $A60E
-//	.WORD $A616
-//	.WORD $A61C
-//	.WORD $A622
-//UNKNOWN_1C91A4:
-//	.BYTE $87, $18
-//	.WORD $A083
-//	.WORD $A08D
-//	.WORD $A097
-//	.WORD $A0A1
-//UNKNOWN_1C91AE:
-//	.BYTE $00, $28
-//	.WORD $A811
-//	.WORD $A819
-//	.WORD $A825
-//	.WORD $A82D
-//UNKNOWN_1C91B8:
-//	.BYTE $02, $43
-//	.WORD $A995
-//	.WORD $A98F
-//	.WORD $A99B
-//	.WORD $A9A1
-//UNKNOWN_1C91C2:
-//	.BYTE $00, $35
-//	.WORD $AA1C
-//	.WORD $AA26
-//	.WORD $AA2E
-//	.WORD $AA36
-//UNKNOWN_1C91CC:
-//	.BYTE $00, $18
-//	.WORD $BC45
-//	.WORD $BC59
-//	.WORD $BC65
-//	.WORD $BC79
-//UNKNOWN_1C91D6:
-//	.BYTE $00, $43
-//	.WORD $AB1E
-//	.WORD $AB2C
-//	.WORD $AB36
-//	.WORD $AB3C
-//UNKNOWN_1C91E0:
-//	.BYTE $00, $28
-//	.WORD $BB29
-//	.WORD $BB23
-//	.WORD $BB2F
-//	.WORD $BB35
-//UNKNOWN_1C91EA:
-//	.BYTE $00, $18
-//	.WORD $ABE0
-//	.WORD $ABF0
-//	.WORD $ABFE
-//	.WORD $AC06
-//UNKNOWN_1C91F4:
-//	.BYTE $00, $0C
-//	.WORD $A8B5
-//	.WORD $A8BD
-//	.WORD $A8C3
-//	.WORD $FFFF
+//     .ifndef VER_JP
+//     .byte 0
+//     .endif
 
-//UNKNOWN_1C91FE:
-//	.BYTE $00, $28
-//	.WORD $AE84
-//	.WORD $AE6C
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C9208:
-//	.BYTE $00, $5A
-//	.WORD $AEFB
-//	.WORD $AF01
-//	.WORD $AF07
-//	.WORD $FFFF
-//UNKNOWN_1C9212:
-//	.BYTE $18, $4C
-//	.WORD $AFFF
-//	.WORD $AFF7
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C921C:
-//	.BYTE $00, $4C
-//	.WORD $B012
-//	.WORD $B01A
-//	.WORD $B022
-//	.WORD $FFFF
-//UNKNOWN_1C9226:
-//	.BYTE $00, $18
-//	.WORD $B061
-//	.WORD $B065
-//	.WORD $B067
-//	.WORD $FFFF
-//UNKNOWN_1C9230:
-//	.BYTE $00, $18
-//	.WORD $B992
-//	.WORD $B998
-//	.WORD $B99E
-//	.WORD $B9B0
-//UNKNOWN_1C923A:
-//	.BYTE $06, $00
-//	.WORD $AEC7
-//	.WORD $AED1
-//	.WORD $AED9
-//	.WORD $FFFF
-//UNKNOWN_1C9244:
-//	.BYTE $83, $18
-//	.WORD $AE98
-//	.WORD $AE9C
-//	.WORD $AE9E
-//	.WORD $FFFF
-//UNKNOWN_1C924E:
-//	.BYTE $83, $43
-//	.WORD $B438
-//	.WORD $B43C
-//	.WORD $B43E
-//	.WORD $FFFF
-//UNKNOWN_1C9258:
-//	.BYTE $87, $18
-//	.WORD $B09E
-//	.WORD $B0A4
-//	.WORD $B0B0
-//	.WORD $B0BC
-//UNKNOWN_1C9262:
-//	.BYTE $00, $18
-//	.WORD $B13C
-//	.WORD $B152
-//	.WORD $B162
-//	.WORD $B174
-//UNKNOWN_1C926C:
-//	.BYTE $30, $28
-//	.WORD UNKNOWN_1C9302
-//	.WORD UNKNOWN_1C9306
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C9276:
-//	.BYTE $18, $28
-//	.WORD UNKNOWN_1C930A
-//	.WORD UNKNOWN_1C930E
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C9280:
-//	.BYTE $00, $28
-//	.WORD UNKNOWN_1C9312
-//	.WORD UNKNOWN_1C9316
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C928A:
-//	.BYTE $00, $28
-//	.WORD UNKNOWN_1C931A
-//	.WORD UNKNOWN_1C931E
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C9294:
-//	.BYTE $30, $28
-//	.WORD UNKNOWN_1C9322
-//	.WORD UNKNOWN_1C9326
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C929E:
-//	.BYTE $18, $28
-//	.WORD UNKNOWN_1C932A
-//	.WORD UNKNOWN_1C932E
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C92A8:
-//	.BYTE $30, $28
-//	.WORD UNKNOWN_1C9332
-//	.WORD UNKNOWN_1C9336
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C92B2:
-//	.BYTE $18, $28
-//	.WORD UNKNOWN_1C933A
-//	.WORD UNKNOWN_1C933E
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C92BC:
-//	.BYTE $00, $43
-//	.WORD $B461
-//	.WORD $B467
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C92C6:
-//	.BYTE $00, $28
-//	.WORD $B825
-//	.WORD $B817
-//	.WORD $B839
-//	.WORD $B847
-//UNKNOWN_1C92D0:
-//	.BYTE $00, $28
-//	.WORD $B479
-//	.WORD $B47F
-//	.WORD $A827
-//	.WORD $A82F
-//UNKNOWN_1C92DA:
-//	.BYTE $00, $18
-//	.WORD $FFFF
-//	.WORD $B495
-//	.WORD $FFFF
-//	.WORD $FFFF
-//UNKNOWN_1C92E4:
-//	.BYTE $00, $28
-//	.WORD $B4A3
-//	.WORD $B4A9
-//	.WORD $B4AF
-//	.WORD $FFFF
-//UNKNOWN_1C92EE:
-//	.BYTE $00, $28
-//	.WORD $B556
-//	.WORD $B55E
-//	.WORD $FFFF
-//	.WORD $FFFF
+// Music_Table:
 
-//UNKNOWN_1C92F8:
-//	.BYTE $00, $43
-//	.WORD $B580
-//	.WORD $B588
-//	.WORD $B590
-//	.WORD $B596
+// Ocarina_header:
+// .byte $18
+// .byte NLT_18-Tempo_Lengths
+// .addr -1
+// .addr -1
+// .addr ntbl_xc
+// .addr -1
+
+// Flippant_Battle_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr mus_b_flippant_pulse1
+// .addr mus_b_flippant_pulse2
+// .addr mus_b_flippant_triangle
+// .addr mus_b_flippant_noise
+
+// Dangerous_Battle_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr mus_b_dangerous_pulse1
+// .addr mus_b_dangerous_pulse2
+// .addr mus_b_dangerous_triangle
+// .addr mus_b_dangerous_noise
+
+// Hippie_Battle_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr mus_b_hippie_pulse1
+// .addr mus_b_hippie_pulse2
+// .addr mus_b_hippie_triangle
+// .addr mus_b_hippie_noise
+
+// Win_Battle_header:
+// .byte $00
+// .byte NLT_00-Tempo_Lengths
+// .addr mus_b_win_pulse1
+// .addr mus_b_win_pulse2
+// .addr mus_b_win_triangle
+// .addr -1
+
+// Bein_Friends_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr mus_bein_friends_pulse1
+// .addr mus_bein_friends_pulse2
+// .addr mus_bein_friends_triangle
+// .addr mus_bein_friends_noise
+
+// Pollyanna_header:
+// .byte $00
+// .byte NLT_35-Tempo_Lengths
+// .addr mus_pollyanna_pulse1
+// .addr mus_pollyanna_pulse2
+// .addr mus_pollyanna_triangle
+// .addr mus_pollyanna_noise
+
+// Yucca_Desert_header:
+// .byte $81
+// .byte NLT_0C-Tempo_Lengths
+// .addr mus_yucca_desert_pulse1
+// .addr mus_yucca_desert_pulse2
+// .addr mus_yucca_desert_triangle
+// .addr mus_yucca_desert_noise
+
+// Magicant_BGM_header:
+// .byte $00
+// .byte NLT_4C-Tempo_Lengths
+// .addr mus_magicant_pulse1
+// .addr mus_magicant_pulse2
+// .addr mus_magicant_triangle
+// .addr mus_magicant_noise
+
+// Snowman_BGM_header:
+// .byte $00
+// .byte NLT_35-Tempo_Lengths
+// .addr mus_snowman_pulse1
+// .addr mus_snowman_pulse2
+// .addr mus_snowman_triangle
+// .addr -1
+
+// Mt_Itoi_BGM_header:
+// .byte $00
+// .byte NLT_4C-Tempo_Lengths
+// .addr mus_mt_itoi_pulse1
+// .addr mus_mt_itoi_pulse2
+// .addr mus_mt_itoi_triangle
+// .addr mus_mt_itoi_noise
+
+// Factory_BGM_header:
+// .byte $00
+// .byte NLT_35-Tempo_Lengths
+// .addr mus_factory_pulse1
+// .addr mus_factory_pulse2
+// .addr mus_factory_triangle
+// .addr mus_factory_noise
+
+// Ghastly_Site_header:
+// .byte $00
+// .byte NLT_35-Tempo_Lengths
+// .addr mus_ghastly_site_pulse1
+// .addr mus_ghastly_site_pulse2
+// .addr mus_ghastly_site_triangle
+// .addr mus_ghastly_site_noise
+
+// Twinkle_Elementary_BGM_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr mus_twinkle_elementary_pulse1
+// .addr mus_twinkle_elementary_pulse2
+// .addr mus_twinkle_elementary_triangle
+// .addr mus_twinkle_elementary_noise
+
+// Humoresque_Of_A_Little_Dog_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr mus_humoresque_of_a_little_dog_pulse1
+// .addr mus_humoresque_of_a_little_dog_pulse2
+// .addr mus_humoresque_of_a_little_dog_triangle
+// .addr mus_humoresque_of_a_little_dog_noise
+
+// Poltergeist_header:
+// .byte $87   ; Transpose
+// .byte NLT_18-Tempo_Lengths   ; Note length table offset
+// .addr mus_poltergeist_pulse1 ; Pulse1 phrase pointers
+// .addr mus_poltergeist_pulse2 ; Pulse2 phrase pointers
+// .addr mus_poltergeist_triangle ; Triangle phrase pointers
+// .addr mus_poltergeist_noise ; Noise phrase pointers
+
+// Underground_BGM_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr mus_underground_pulse1
+// .addr mus_underground_pulse2
+// .addr mus_underground_triangle
+// .addr mus_underground_noise
+
+// Home_BGM_header:
+// .byte $02
+// .byte NLT_43-Tempo_Lengths
+// .addr mus_home_pulse1
+// .addr mus_home_pulse2
+// .addr mus_home_triangle
+// .addr mus_home_noise
+
+// Approaching_Mt_Itoi_header:
+// .byte $00
+// .byte NLT_35-Tempo_Lengths
+// .addr mus_approaching_mt_itoi_pulse1
+// .addr mus_approaching_mt_itoi_pulse2
+// .addr mus_approaching_mt_itoi_triangle
+// .addr mus_approaching_mt_itoi_noise
+
+// Paradise_Line_BGM_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr mus_paradise_line_pulse1
+// .addr mus_paradise_line_pulse2
+// .addr mus_paradise_line_triangle
+// .addr mus_paradise_line_noise
+
+// Fallin_Love_header:
+// .byte $00
+// .byte NLT_43-Tempo_Lengths
+// .addr mus_fallin_love_pulse1
+// .addr mus_fallin_love_pulse2
+// .addr mus_fallin_love_triangle
+// .addr mus_fallin_love_noise
+
+// Mother_Earth_header:
+// .byte $00   ; Transpose
+// .byte NLT_28-Tempo_Lengths   ; Note length table offset
+// .addr mus_mother_earth_pulse1 ; Pulse1 phrase pointers
+// .addr mus_mother_earth_pulse2 ; Pulse2 phrase pointers
+// .addr mus_mother_earth_triangle ; Triangle phrase pointers
+// .addr mus_mother_earth_noise ; Noise phrase pointers
+
+// Tank_BGM_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr mus_tank_pulse1
+// .addr mus_tank_pulse2
+// .addr mus_tank_triangle
+// .addr mus_tank_noise
+
+// Monkey_Cave_BGM_header:
+// .byte $00
+// .byte NLT_0C-Tempo_Lengths
+// .addr mus_monkey_cave_pulse1
+// .addr mus_monkey_cave_pulse2
+// .addr mus_monkey_cave_triangle
+// .addr -1
+
+// Music_Table_2:
+
+// Queen_Marys_Song_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr B29_0E84
+// .addr B29_0E6C
+// .addr -1
+// .addr -1
+
+// Wisdom_Of_The_World_header:
+// .byte $00
+// .byte NLT_5A-Tempo_Lengths
+// .addr B29_0EFB
+// .addr B29_0F01
+// .addr B29_0F07
+// .addr -1
+
+// Tombstone_BGM_header:
+// .byte $18
+// .byte NLT_4C-Tempo_Lengths
+// .addr B29_0FFF
+// .addr B29_0FF7
+// .addr -1
+// .addr -1
+
+// Game_Over_BGM_header:
+// .byte $00
+// .byte NLT_4C-Tempo_Lengths
+// .addr B29_1012
+// .addr B29_101A
+// .addr B29_1022
+// .addr -1
+
+// Big_Victory_BGM_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr mus_big_victory_pulse1
+// .addr mus_big_victory_pulse2
+// .addr mus_big_victory_triangle
+// .addr -1
+
+// Airplane_BGM_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr B29_1992
+// .addr B29_1998
+// .addr B29_199E
+// .addr B29_19B0
+
+// Level_Up_BGM_header:
+// .byte $06
+// .byte NLT_00-Tempo_Lengths
+// .addr mus_level_up_pulse1_intro
+// .addr mus_level_up_pulse2_intro
+// .addr mus_level_up_triangle_intro
+// .addr -1
+
+// Recovery_BGM_header:
+// .byte $83
+// .byte NLT_18-Tempo_Lengths
+// .addr B29_0E98
+// .addr B29_0E9C
+// .addr B29_0E9E
+// .addr -1
+
+// Fanfare_BGM_header:
+// .byte $83
+// .byte NLT_43-Tempo_Lengths
+// .addr B29_1438
+// .addr B29_143C
+// .addr B29_143E
+// .addr -1
+
+// Live_House_BGM_header:
+// .byte $87
+// .byte NLT_18-Tempo_Lengths
+// .addr B29_109E
+// .addr B29_10A4
+// .addr B29_10B0
+// .addr B29_10BC
+
+// All_That_I_Needed_Was_You_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr B29_113C
+// .addr B29_1152
+// .addr B29_1162
+// .addr B29_1174
+
+// Melody_1_header:
+// .byte $30
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_1302
+// .addr B28_1306
+// .addr -1
+// .addr -1
+
+// Melody_2_header:
+// .byte $18
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_130A
+// .addr B28_130E
+// .addr -1
+// .addr -1
+
+// Melody_3_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_1312
+// .addr B28_1316
+// .addr -1
+// .addr -1
+
+// Melody_4_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_131A
+// .addr B28_131E
+// .addr -1
+// .addr -1
+
+// Melody_5_header:
+// .byte $30
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_1322
+// .addr B28_1326
+// .addr -1
+// .addr -1
+
+// Melody_6_header:
+// .byte $18
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_132A
+// .addr B28_132E
+// .addr -1
+// .addr -1
+
+// Melody_7_header:
+// .byte $30
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_1332
+// .addr B28_1336
+// .addr -1
+// .addr -1
+
+// Melody_8_header:
+// .byte $18
+// .byte NLT_28-Tempo_Lengths
+// .addr B28_133A
+// .addr B28_133E
+// .addr -1
+// .addr -1
+
+// VS_Giegue_BGM_header:
+// .byte $00
+// .byte NLT_43-Tempo_Lengths
+// .addr B29_1461
+// .addr B29_1467
+// .addr -1
+// .addr -1
+
+// Ending_JP_BGM_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr mus_epiloguejp_pulse1_start
+// .addr mus_epiloguejp_pulse2_start
+// .addr mus_epiloguejp_triangle_start
+// .addr mus_epiloguejp_noise_start
+
+// Zoo_BGM_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr B29_1479
+// .addr B29_147F
+// .addr B29_0827
+// .addr B29_082F
+
+// Phone_BGM_header:
+// .byte $00
+// .byte NLT_18-Tempo_Lengths
+// .addr -1
+// .addr B29_1495
+// .addr -1
+// .addr -1
+
+// Youngtown_BGM_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr B29_14A3
+// .addr B29_14A9
+// .addr B29_14AF
+// .addr -1
+
+// Cave_Of_The_Tail_BGM_header:
+// .byte $00
+// .byte NLT_28-Tempo_Lengths
+// .addr B29_1556
+// .addr B29_155E
+// .addr -1
+// .addr -1
+
+// Path_To_Giegue_BGM_header:
+// .byte $00
+// .byte NLT_43-Tempo_Lengths
+// .addr B29_1580
+// .addr B29_1588
+// .addr B29_1590
+// .addr B29_1596
 
 //UNKNOWN_1C9302:
 //	.WORD UNKNOWN_1C9347

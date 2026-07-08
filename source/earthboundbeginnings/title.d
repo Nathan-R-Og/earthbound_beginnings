@@ -3,6 +3,9 @@ module earthboundbeginnings.title;
 import earthboundbeginnings.constant;
 import earthboundbeginnings.external;
 import earthboundbeginnings.ram;
+import earthboundbeginnings.defs;
+import earthboundbeginnings.sprites;
+import std.stdio;
 
 /**
  * Original_Address: $(DOLLAR) $9400, bank $14
@@ -18,7 +21,7 @@ void intro() @safe {
 	//	LDA #$19
 	//	LDX #$8A
 	//	LDY #$A2
-	//	JSR UNKNOWN_FDF3
+	//	JSR TempUpperBankswitch
 	//	JSR UNKNOWN_EEC8
 	//	LDA #$35
 	//	LDX #$62
@@ -232,7 +235,7 @@ void unknown149516() @safe {
 	//	LDA #$19
 	//	LDX #$A6
 	//	LDY #$A4
-	//	JSR UNKNOWN_FDF3
+	//	JSR TempUpperBankswitch
 	//UNKNOWN_14958A:
 	//	RTS
 	//assert(0, "NYI");
@@ -1247,66 +1250,60 @@ void Title_Screen() @safe {
 
     DoIntroTransition(presented_by_tiles);
 
-//	LDA #$8F
-//	STA $60
-//	LDA #$9E
-//	STA $61
-//	JSR LoadPaletteFrom
-//	JSR OT0_DefaultTransition
-//	LDA #$69
-//	LDX #$9E
-//	JSR UNKNOWN_CEE8
-//	LDA #$18
-//	LDX #$9F
-//	JSR load_tilemap_into_queue
-//	LDA #$00
-//	STA $60
-//	LDA #$10
-//	STA $03E0
-//	LDA #$00
-//	STA $03E1
-//	STA $03E4
-//	STA $03E5
-//	LDA #$58
-//	STA $03E2
-//	LDA #$57
-//	STA $03E3
-//	LDA #$00
-//	STA $DA
-//@UNKNOWN1:
-//	CLC
-//	LDA $60
-//	ADC #$B0
-//	STA $03E6
-//	LDA #$00
-//	ADC #$96
-//	STA $03E7
-//	LDA #$0A
-//	STA $E5
-//	CLC
-//	LDA $60
-//	ADC #$04
-//	CMP #$1C
-//	BNE @UNKNOWN2
-//	LDA #$00
-//@UNKNOWN2:
-//	STA $60
-//@UNKNOWN3:
-//	LDA $DA
-//	AND #$10
-//	BNE @UNKNOWN4
-//	LDA $E5
-//	ORA $E0
-//	BNE @UNKNOWN3
-//	BEQ @UNKNOWN1
-//@UNKNOWN4:
-//	LDX #$00
-//	STX $DA
-//	JSR OT0_DefaultTransition
+    LoadPaletteFrom(Title_Palette);
+
+	OT0_DefaultTransition();
+
+	//mmc1 fix
+	ram_PPUCTRL &= ~8;
+	nes.PPUCTRL = ram_PPUCTRL;
+    BankswitchCHRFromTable(Title_CHR);
+
+	load_tilemap_into_queue(title_screen_tiles);
+
+	UNK_60 = 0;
+	SpriteObject new_earth = {
+		16,
+		0,
+		{88, 87},
+		{0, 0},
+		[],
+		&SPRITEDEF_EARTH[UNK_60]
+	};
+	SPRITE_OBJECTS[28] = new_earth;
+
+    //reset input?
+	pad1_forced = 0;
+
+	while(1){
+		SPRITE_OBJECTS[28].spriteDef = &SPRITEDEF_EARTH[UNK_60];
+
+		new_animation_timer = 10;
+
+		UNK_60++;
+		if (UNK_60 == 7){
+			UNK_60 = 0;
+		}
+		bool breaker = false;
+		while((new_animation_timer | current_animation_timer) != 0){
+			//check if start pressed at title
+			if (pad1_forced & PAD_START){
+				breaker = true;
+				break;
+			}
+			nes.wait();
+		}
+		if (breaker){
+			break;
+		}
+	}
+
+	pad1_forced = 0;
+	OT0_DefaultTransition();
 //	LDA #$19
 //	LDX #$FF
 //	LDY #$9F
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	RTS
 }
 
@@ -1315,11 +1312,11 @@ void DoIntroTransition(ubyte[] tiles) @safe {
 	AdvanceIfPressStart(255);
   	AdvanceIfPressStart(64);
 	OT0_DefaultTransition();
-	version(original){
-  		AdvanceIfPressStart(80);
-	} else {
+	//version(original){
+  	//	AdvanceIfPressStart(80);
+	//} else {
   		AdvanceIfPressStart(64);
-	}
+	//}
 	return ClearTilemaps();
 }
 
@@ -1370,7 +1367,7 @@ ubyte[] Title_Palette = [
 ];
 
 ubyte[] nmi_fill_map_with_palette_2 = [
-	0x08,
+	NMI_COMMANDS.PPU_WRITE_BYTE,
 	0x40,
 	0x23,0xC0,
 	0xAA,
@@ -1378,7 +1375,7 @@ ubyte[] nmi_fill_map_with_palette_2 = [
 ];
 
 ubyte[] B20_1EB5 = [
-	0x07,
+	NMI_COMMANDS.PPU_WRITE_ADDRS,
 	0x04,
 	0x23,0xD2,
 	0x40,

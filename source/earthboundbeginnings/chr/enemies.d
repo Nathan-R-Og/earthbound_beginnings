@@ -1,0 +1,72 @@
+module earthboundbeginnings.chr.enemies;
+
+import replatform64.nes;
+
+//chr4
+@Asset("split/us/chr/battle_0.bin", DataType.raw)
+immutable(ubyte)[] battle_0;
+@Asset("split/us/chr/battle_1.bin", DataType.raw)
+immutable(ubyte)[] battle_1;
+@Asset("split/us/chr/battle_2.bin", DataType.raw)
+immutable(ubyte)[] battle_2;
+@Asset("split/us/chr/battle_3.bin", DataType.raw)
+immutable(ubyte)[] battle_3;
+@Asset("split/us/chr/battle_4.bin", DataType.raw)
+immutable(ubyte)[] battle_4;
+@Asset("split/us/chr/battle_5.bin", DataType.raw)
+immutable(ubyte)[] battle_5;
+@Asset("split/us/chr/battle_6.bin", DataType.raw)
+immutable(ubyte)[] battle_6;
+@Asset("split/us/chr/battle_7.bin", DataType.raw)
+immutable(ubyte)[] battle_7;
+//chr5
+@Asset("split/us/chr/battle_8.bin", DataType.raw)
+immutable(ubyte)[] battle_8;
+@Asset("split/us/chr/battle_9.bin", DataType.raw)
+immutable(ubyte)[] battle_9;
+@Asset("split/us/chr/battle_10.bin", DataType.raw)
+immutable(ubyte)[] battle_10;
+@Asset("split/us/chr/battle_11.bin", DataType.raw)
+immutable(ubyte)[] battle_11;
+@Asset("split/us/chr/battle_12.bin", DataType.raw)
+immutable(ubyte)[] battle_12;
+@Asset("split/us/chr/battle_13.bin", DataType.raw)
+immutable(ubyte)[] battle_13;
+@Asset("split/us/chr/battle_14.bin", DataType.raw)
+immutable(ubyte)[] battle_14;
+@Asset("split/us/chr/battle_15.bin", DataType.raw)
+immutable(ubyte)[] battle_15;
+//chr6
+@Asset("split/us/chr/battle_16.bin", DataType.raw)
+immutable(ubyte)[] battle_16;
+@Asset("split/us/chr/battle_17.bin", DataType.raw)
+immutable(ubyte)[] battle_17;
+@Asset("split/us/chr/battle_18.bin", DataType.raw)
+immutable(ubyte)[] battle_18;
+@Asset("split/us/chr/battle_19.bin", DataType.raw)
+immutable(ubyte)[] battle_19;
+@Asset("split/us/chr/battle_20.bin", DataType.raw)
+immutable(ubyte)[] battle_20;
+@Asset("split/us/chr/battle_21.bin", DataType.raw)
+immutable(ubyte)[] battle_21;
+@Asset("split/us/chr/battle_22.bin", DataType.raw)
+immutable(ubyte)[] battle_22;
+@Asset("split/us/chr/battle_23.bin", DataType.raw)
+immutable(ubyte)[] battle_23;
+//chr7
+@Asset("split/us/chr/battle_24.bin", DataType.raw)
+immutable(ubyte)[] battle_24;
+@Asset("split/us/chr/battle_25.bin", DataType.raw)
+immutable(ubyte)[] battle_25;
+@Asset("split/us/chr/battle_26.bin", DataType.raw)
+immutable(ubyte)[] battle_26;
+@Asset("split/us/chr/battle_27.bin", DataType.raw)
+immutable(ubyte)[] battle_27;
+@Asset("split/us/chr/battle_28.bin", DataType.raw)
+immutable(ubyte)[] battle_28;
+@Asset("split/us/chr/battle_29.bin", DataType.raw)
+immutable(ubyte)[] battle_29;
+@Asset("split/us/chr/battle_30.bin", DataType.raw)
+immutable(ubyte)[] battle_30;
+@Asset("split/us/chr/battle_31.bin", DataType.raw)
+immutable(ubyte)[] battle_31;

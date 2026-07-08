@@ -1,5 +1,7 @@
 module earthboundbeginnings.constant;
 
+import earthboundbeginnings.chr.main;
+
 import replatform64.nes : MirrorType;
 
 import earthboundbeginnings.music;
@@ -11,10 +13,12 @@ import earthboundbeginnings.defs;
 import earthboundbeginnings.structures;
 
 import std.stdio;
+import std.range;
 
 ubyte nmi_y = 0;
 ubyte tiledarea_x = 0;
 ubyte tiledarea_y = 0;
+ubyte[] tiledarea_stack = [];
 ubyte working_tile = 0xa0;
 bool printing_tilepack = false;
 
@@ -48,8 +52,78 @@ bool printing_tilepack = false;
 //	STA UNKNOWN_0100
 //	RTS
 
-//UNKNOWN_C22C:
-//	.BYTE $00, $01, $02, $03, $08, $09, $96, $97, $98, $99, $9A, $9B, $9C, $9D, $9E, $9F, $A0, $A1, $A2, $A3, $A4, $2A, $2B, $2C, $2D, $2E, $AA, $AB, $AC, $AD, $AE, $93, $04, $05, $06, $07, $0E, $0F, $D6, $D7, $D8, $D9, $DA, $DB, $DC, $DD, $DE, $DF, $E0, $E1, $E2, $E3, $E4, $6A, $6B, $6C, $6D, $6E, $EA, $EB, $EC, $ED, $EE, $D3
+// DATA NOW!
+// control codes
+// NOTE: in EBB, these are almost completely irrelevant. these are basically only
+//here as holdover from MOTHER.
+ubyte[] control_codes = [
+    0x00, // 00 stopText
+    0x01, // 01 newLine
+    0x02, // 02 waitThenOverwrite
+    0x03, // 03 pauseText
+    0x08, // 04 XX XX goto
+    0x09, // 05 t_nop
+    0x96, // 06 が
+    0x97, // 07 ぎ
+    0x98, // 08 ぐ
+    0x99, // 09 げ
+    0x9a, // 0A ご
+    0x9b, // 0B ざ
+    0x9c, // 0C じ
+    0x9d, // 0D ず
+    0x9e, // 0E ぜ
+    0x9f, // 0F ぞ
+    0xa0, // 10 だ
+    0xa1, // 11 ぢ
+    0xa2, // 12 づ
+    0xa3, // 13 で
+    0xa4, // 14 ど
+    0x2a, // 15 ぱ
+    0x2b, // 16 ぴ
+    0x2c, // 17 ぷ
+    0x2d, // 18 ぺ
+    0x2e, // 19 ぽ
+    0xaa, // 1A ば
+    0xab, // 1B び
+    0xac, // 1C ぶ
+    0xad, // 1D べ hirigana
+    0xae, // 1E ぼ
+
+    0x93, // 1F
+    0x04, // [20 XX YY] set_pos
+    0x05, // [21 XX XX] print_string
+    0x06, // [22 XX YY] repeatTile
+    0x07, // [23 XX XX YY ZZ AA] print_number
+    0x0e, // 24 uibox_l
+    0x0f, // 25 uibox_r
+
+    0xd6, // 26 ガ
+    0xd7, // 27 ギ
+    0xd8, // 28 グ
+    0xd9, // 29 ゲ
+    0xda, // 2A ゴ
+    0xdb, // 2B ザ
+    0xdc, // 2C ジ
+    0xdd, // 2D ズ
+    0xde, // 2E ゼ
+    0xdf, // 2F ゾ
+    0xe0, // 30 ダ
+    0xe1, // 31 ヂ
+    0xe2, // 32 ヅ
+    0xe3, // 33 デ
+    0xe4, // 34 ド
+    0x6a, // 35 パ
+    0x6b, // 36 ピ
+    0x6c, // 37 プ
+    0x6d, // 38 ペ katakana
+    0x6e, // 39 ポ
+    0xea, // 3A バ
+    0xeb, // 3B ビ
+    0xec, // 3C ブ
+    0xed, // 3D ベ katakana
+    0xee, // 3E ボ
+    0xd3, // 3F ヴ
+];
 
 //UNKNOWN_C26C:
 //	LDA #$D9
@@ -62,7 +136,7 @@ bool printing_tilepack = false;
 //	LDA #$19
 //	LDX #$B2
 //	LDY #$A2
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	LDA #$00
 //	STA $EC
 //	LDA #$FF
@@ -103,7 +177,7 @@ bool printing_tilepack = false;
 //	PHA
 //	INY
 //	TYA
-//	JSR UNKNOWN_CB38
+//	JSR AddTo_UNK_74
 //	LDA $72
 //	CMP #$00
 //	BNE @UNKNOWN4
@@ -144,7 +218,7 @@ bool printing_tilepack = false;
 //	LDA #$19
 //	LDX #$1D
 //	LDY #$A3
-//	JSR UNKNOWN_FDF3
+//	JSR TempUpperBankswitch
 //	JMP UNKNOWN_FD4A
 
 //UNKNOWN_C322:
@@ -285,7 +359,7 @@ bool printing_tilepack = false;
 //	JSR DrawTilepackClear
 //@UNKNOWN4:
 //	LDA #$02
-//	JSR UNKNOWN_CB38
+//	JSR AddTo_UNK_74
 //	LDA $72
 //	CMP #$00
 //	BNE @UNKNOWN3
@@ -636,51 +710,50 @@ void SetupPartyUi() @safe {
 //	RTS
 
 void AddSpacesOnScreen() @safe {
-//	LDA $70
-//	CLC
-//	SBC $7E
-//	BCC @UNKNOWN1
-//	TAY
-//@UNKNOWN0:
-//	LDA #$A0
-//	JSR AddTile
-//	DEY
-//	BPL @UNKNOWN0
-//	LDY $E6
-//	LDA $0401,Y
-//	BEQ @UNKNOWN1
-//	TXA
-//	TAY
-//@UNKNOWN1:
-//	STY $E6
+	if (UNK_70 - char_count < 0){
+		nmi_data_offset = tiledarea_y;
+		return;
+	}
+
+	ubyte temp_y = cast(ubyte) (UNK_70 - char_count);
+	while(temp_y != 0xff){
+		AddTile(0xA0, &tiledarea_x);
+		temp_y--;
+	}
+	temp_y = nmi_queue[cast(ubyte) (nmi_data_offset+1)];
+	if (temp_y != 0){
+		nmi_data_offset = tiledarea_x;
+	}
 }
 
 
-int DrawTilepack() @safe {
+ubyte DrawTilepack() @safe {
 	PpuSync();
 	nmi_data_offset = 0;
 	return TilesTilNMI();
 }
 
-int DrawTilepackClear() @safe {
+ubyte DrawTilepackClear() @safe {
 	PpuSync();
 	nmi_data_offset = 0;
 	//ClearAreaOnScreen();
-	//AddSpacesOnScreen();
+	AddSpacesOnScreen();
 	return TilesTilNMI();
 }
 
-int TilesTilNMI() @safe {
+ubyte TilesTilNMI() @safe {
 	TiledArea();
 	AddSpacesOnScreen();
 
+	//BUGGERA
 	nmi_queue[tiledarea_y] = 0;
+	//nmi_queue[nmi_data_offset] = 0;
 	nmi_data_offset = 0;
 	new_animation_timer = 0x80;
 	return TilesTilNMI_CheckLastRow();
 }
 
-int TilesTilNMI_CheckLastRow() @safe {
+ubyte TilesTilNMI_CheckLastRow() @safe {
 	GetTextRowPtr();
 	if (UNK_72 == 1){
 		ntbl_y++;
@@ -867,10 +940,11 @@ void TiledArea() @safe {
 	CalculateNTAddr();
 	byte_count = UNK_71;
 	tiledarea_x = nmi_data_offset;
+	tiledarea_y = 0;
 	char_count = 0;
+	tiledarea_stack ~= 0;
 
 	WriteRowHeader(&tiledarea_x);
-	tiledarea_y = 0;
 	printing_tilepack = true;
 
 	while(printing_tilepack){
@@ -884,7 +958,7 @@ void TiledArea() @safe {
 		} else {
 			working_tile = 0xa0;
 		}
-		AddTile(&working_tile, &tiledarea_x);
+		AddTile(working_tile, &tiledarea_x);
 	}
 }
 
@@ -918,34 +992,51 @@ void ClearAreaOnScreen() @safe {
 //	JSR AddTile
 //	JMP @UNKNOWN__
 
+
+
+void TILES_restoreptr() @safe {
+	ubyte dude = tiledarea_stack.front;
+	tiledarea_stack.popFront();
+	if (dude == 0){
+		if (nmi_queue[cast(ubyte) (nmi_data_offset+1)] != 0){
+			tiledarea_y = tiledarea_x;
+		}
+		if (UNK_72 > 0x7F){
+			ntbl_y++;
+		} else {
+			AddTo_UNK_74(UNK_7A);
+		}
+		printing_tilepack = false; //exit
+	} else {
+		writeln("IMPLEMENT THIS");
+		// ;a -> y, y++ ++
+		// tay
+		// iny
+		// iny
+		// ;pull a, a -> $75
+		// pla
+		// .ifdef VER_JP
+		// 	J30_0a57:
+		// .endif
+		// sta tilepack_ptr+1
+		// ;pull a, a -> $74
+		// pla
+		// sta tilepack_ptr
+		// jmp (UNK_7C)
+	}
+}
+
 void StringCommandHandler() @safe {
 	UNK_72 = working_tile;
 	switch (working_tile) {
 		case 0:
-			printing_tilepack = false;
-			return;
 		case 1:
-			return;
 		case 2:
-			return;
 		case 3:
+			TILES_restoreptr();
 			return;
-		case 5:
-			return;
-
-		case 0x23:
-			tiledarea_y++;
-			tiledarea_y++;
-			tiledarea_y++;
-			tiledarea_y++;
-			return;
-		//goto
+		//set_pos
 		case 4:
-			tiledarea_y++;
-			tiledarea_y++;
-			return;
-		//setpos
-		case 0x20:
 			bool overflow = UNK_7A >= 0xFE;
 			ntbl_x = tilepack_ptr[UNK_7A];
 			UNK_7A++;
@@ -965,12 +1056,12 @@ void StringCommandHandler() @safe {
 
 			tiledarea_y = UNK_7A;
 			return;
-		case 0x21:
+		case 5:
 			tiledarea_y++;
 			tiledarea_y++;
 			return;
 		//repeatTile
-		case 0x22:
+		case 6:
 			UNK_72 = tilepack_ptr[UNK_7A];
 			UNK_7A++;
 			ubyte count = tilepack_ptr[UNK_7A];
@@ -981,11 +1072,24 @@ void StringCommandHandler() @safe {
 				if (count == 0xff){
 					break;
 				}
-				AddTile(&UNK_72, &tiledarea_x);
+				AddTile(UNK_72, &tiledarea_x);
 			}
 
 			tiledarea_y++;
 			tiledarea_y++;
+			return;
+		case 7:
+			tiledarea_y++;
+			tiledarea_y++;
+			tiledarea_y++;
+			tiledarea_y++;
+			return;
+		//goto
+		case 8:
+			tiledarea_y++;
+			tiledarea_y++;
+			return;
+		case 9:
 			return;
 		default:
 			return;
@@ -1061,7 +1165,7 @@ void StringCommandHandler() @safe {
 //	RTS
 //@UNKNOWN4:
 //	LDA $7A
-//	JSR UNKNOWN_CB38
+//	JSR AddTo_UNK_74
 //	LDA $72
 //	RTS
 
@@ -1200,7 +1304,7 @@ void CalculateNTAddr() @safe {
 	UNK_79 = cast(ubyte) (c | ((scroll_y >> 1) + 8));
 
 	c = cast(ubyte) (((ntbl_y + 1) << 2) + UNK_79);
-	if (c > 0x7f){
+	if (c < 0x80){
 		c -= 8;
 	}
 	UNK_79 = (c << 1) & 0xF8;
@@ -1220,8 +1324,8 @@ void CalculateNTAddr() @safe {
 	UNK_79 += c & 0x1f;
 }
 
-void AddTile(ubyte* tile, ubyte* queue_pos) @safe {
-	nmi_queue[*queue_pos] = *tile;
+void AddTile(ubyte tile, ubyte* queue_pos) @safe {
+	nmi_queue[*queue_pos] = tile;
 	(*queue_pos)++;
 	nmi_queue[nmi_data_offset+1]++;
 	char_count++;
@@ -1229,15 +1333,15 @@ void AddTile(ubyte* tile, ubyte* queue_pos) @safe {
 	if (UNK_7B != 0){
 		return;
 	}
-	UNK_79 &= 0xE0;
-	UNK_78 ^= 0x04;
-	WriteRowHeader(queue_pos);
+	//UNK_79 &= 0xE0;
+	//UNK_78 ^= 0x04;
+	//WriteRowHeader(queue_pos);
 }
 
 void WriteRowHeader(ubyte* x) @safe {
 	nmi_data_offset = *x;
 
-	nmi_queue[*x] = 5;
+	nmi_queue[*x] = NMI_COMMANDS.PPU_WRITE;
 	(*x)++;
 	nmi_queue[*x] = 0;
 	(*x)++;
@@ -1251,23 +1355,31 @@ void WriteRowHeader(ubyte* x) @safe {
 bool B30_0a5c() @safe {
 	tiledarea_y++;
 	UNK_7A = tiledarea_y;
-	switch (working_tile){
-		//TODO: move main handling to StringCommandHandler
-		case 0x23:
-		case 4:
-		case 0x20:
-		case 0x21:
-		case 0x22:
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-        case 5:
-			return true;
-		default:
-			return false;
+	//normal tile
+	if (working_tile >= 0x40){
+		return false;
 	}
-	return false;
+
+	//load index in control codes
+	working_tile = control_codes[working_tile];
+
+	//kana
+	if (working_tile >= 0x80){
+		return false;
+	}
+
+	//output
+	if (working_tile >= 0x80){
+		working_tile |= 0x80;
+		return false;
+	}
+
+	//is ui piece
+	if (working_tile >= 0xA){
+		working_tile |= 0xD0;
+		return false;
+	}
+	return true;
 }
 
 //UNKNOWN_CA7C:
@@ -1367,14 +1479,15 @@ bool B30_0a5c() @safe {
 void GetTextRowPtr() @safe {
 }
 
-//UNKNOWN_CB38:
-//	CLC
-//	ADC $74
-//	STA $74
-//	LDA #$00
-//	ADC $75
-//	STA $75
-//	RTS
+//check if works
+//tilepack_ptr += a
+void AddTo_UNK_74(ubyte offset) @safe {
+	if (offset >= tilepack_ptr.length){
+		tilepack_ptr = [];
+	} else {
+    	tilepack_ptr = tilepack_ptr[offset..$];
+	}
+}
 
 /**
  * Original_Address: $(DOLLAR) $CB44, bank $1E
@@ -3885,7 +3998,7 @@ void STORE_COORDINATES() @safe {
 //	AND #$C0
 //	BNE @UNKNOWN1
 //	LDA ($38),Y
-//	ORA UNKNOWN_EC5D,X
+//	ORA All_Bits,X
 //	STA ($38),Y
 //	LDA #$09
 //	STA UNKNOWN_07EF+2
@@ -3910,7 +4023,7 @@ void STORE_COORDINATES() @safe {
 //	LDA $29
 //	AND #$07
 //	TAX
-//	LDA UNKNOWN_EC5D,X
+//	LDA All_Bits,X
 //	RTS
 
 //UNKNOWN_DCDF:
@@ -5354,14 +5467,14 @@ void unknownDFDA() @safe {
 //	BNE @UNKNOWN1
 //@UNKNOWN0:
 //	JSR UNKNOWN_E646
-//	AND UNKNOWN_EC5D,X
+//	AND All_Bits,X
 //	BNE @UNKNOWN3
 //@UNKNOWN1:
 //	CLC
 //	RTS
 //@UNKNOWN2:
 //	JSR UNKNOWN_E646
-//	AND UNKNOWN_EC5D,X
+//	AND All_Bits,X
 //	BNE @UNKNOWN1
 //@UNKNOWN3:
 //	LDY #$00
@@ -5397,12 +5510,12 @@ void unknownDFDA() @safe {
 
 //UNKNOWN_E661:
 //	JSR UNKNOWN_E641
-//	ORA UNKNOWN_EC5D,X
+//	ORA All_Bits,X
 //	BNE UNKNOWN_E672
 //UNKNOWN_E669:
 //	JSR UNKNOWN_E641
-//	ORA UNKNOWN_EC5D,X
-//	EOR UNKNOWN_EC5D,X
+//	ORA All_Bits,X
+//	EOR All_Bits,X
 //UNKNOWN_E672:
 //	STA $7600,Y
 //	JMP UNKNOWN_E720
@@ -5553,7 +5666,7 @@ void unknownDFDA() @safe {
 //	JSR UNKNOWN_E746
 //	JSR UNKNOWN_E655
 //	JSR UNKNOWN_E772
-//	AND UNKNOWN_EC5D,X
+//	AND All_Bits,X
 //	BEQ @UNKNOWN0
 //	LDA #$04
 //@UNKNOWN0:
@@ -5938,11 +6051,11 @@ void unknownDFDA() @safe {
 //	LDA $0D
 //	BPL @UNKNOWN2
 //	AND #$0F
-//	CMP UNKNOWN_EBDD,X
+//	CMP Direction_By_Input,X
 //	BEQ @UNKNOWN3
 //	STA $0D
 //@UNKNOWN2:
-//	LDA UNKNOWN_EBDD,X
+//	LDA Direction_By_Input,X
 //	RTS
 //@UNKNOWN3:
 //;UNKNOWN_E9F7:
@@ -6123,7 +6236,7 @@ void unknownDFDA() @safe {
 //	LDY #$15
 //	LDA ($30),Y
 //	TAX
-//	LDA UNKNOWN_EC35,X
+//	LDA ShakeTable,X
 //	TAX
 //	LDY #$08
 //	AND #$40
@@ -6220,7 +6333,7 @@ void unknownDFDA() @safe {
 //	JSR UNKNOWN_E73D
 //	JMP UNKNOWN_E9B3
 
-//UNKNOWN_EBDD:
+//Direction_By_Input:
 //	.BYTE $88, $02, $06, $88, $04, $03, $05, $88, $00, $01, $07, $88, $88, $88, $88, $88
 
 //UNKNOWN_EBED:
@@ -6243,24 +6356,31 @@ void unknownDFDA() @safe {
 //	.BYTE $00, $00, $00, $00
 //	.BYTE $10, $00, $00, $00
 
-//UNKNOWN_EC35:
-//	.BYTE $54, $14, $1C, $04
-//	.BYTE $44, $00, $0C, $10
-//	.BYTE $00, $FF, $00, $01
-//	.BYTE $FF, $00, $01, $00
-//	.BYTE $00, $FF, $00, $01
-//	.BYTE $00, $FF, $00, $01
-//	.BYTE $FF, $00, $01, $00
-//	.BYTE $00, $FF, $00, $01
-//	.BYTE $00, $01, $00, $FF
-//	.BYTE $00, $FF, $00, $01
+Vector2B[] ShakeTable = [
+    Vector2B(0,cast(ubyte)-1),
+    Vector2B(0,1),
+    Vector2B(cast(ubyte)-1,0),
+    Vector2B(1,0),
+    Vector2B(0,cast(ubyte)-1),
+    Vector2B(0,1),
+    Vector2B(0,cast(ubyte)-1),
+    Vector2B(0,1),
+    Vector2B(cast(ubyte)-1,0),
+    Vector2B(1,0),
+    Vector2B(0,cast(ubyte)-1),
+    Vector2B(0,1),
+    Vector2B(0,1),
+    Vector2B(0,cast(ubyte)-1),
+    Vector2B(0,cast(ubyte)-1),
+    Vector2B(0,1),
+];
 
-//UNKNOWN_EC5D:
+//All_Bits:
 //	.BYTE $80, $40, $20, $10
 //	.BYTE $08, $04, $02, $01
 
 
-//UNKNOWN_EC65:
+//B31_0c65:
 //	JSR OT0_DefaultTransition
 //UNKNOWN_EC68:
 //	LDX #$00
@@ -6463,9 +6583,9 @@ void OT0_DefaultTransition() @safe {
 	BackupPalette();
 	B31_0ddf:
 	for(ubyte darken = 5; darken != 1; darken--){
-		for(ubyte color = 0x1f; color == 0xff; color--){
+		for(ubyte color = 0x1f; color != 0xff; color--){
 			ubyte out_color = palette_queue[color];
-			if (0x10 >= out_color){
+			if (out_color > 0x10){
 				out_color -= 0x10;
 			} else {
 				out_color = 0xf;
@@ -6519,66 +6639,33 @@ void B31_0e30() @safe {
 	B31_0e33:
 	for (ubyte lighten = 5; lighten != 1; lighten--){
 		for (ubyte color = 0x1f; color != 0xff; color--){
-			ubyte working_color = cast(ubyte)(palette_queue[lighten] - palette_backup[lighten]);
+			ubyte working_color = cast(ubyte)(palette_queue[color] - palette_backup[color]);
 			if (working_color == 0){
 				continue;
 			}
 			working_color &= 0xf;
 			if (working_color == 0){
 				if (working_color < 0x80){
-					working_color = cast(ubyte)(palette_queue[lighten] + 0x10);
+					working_color = cast(ubyte)(palette_queue[color] + 0x10);
 				} else {
-
+					working_color = cast(ubyte)(palette_queue[color] - 0x10);
+					if (working_color < 0x80){
+						working_color = 0xf;
+					}
+				}
+			} else {
+				if ((palette_backup[color] & 0xf) <= 0xd){
+					working_color = cast(ubyte)(palette_backup[color] & 0xf);
+					palette_queue[color] &= 0x30;
+					working_color |= palette_queue[color];
+				} else {
+					working_color = cast(ubyte)(palette_queue[color] + 0x10);
 				}
 			}
 			palette_queue[color] = working_color;
 		}
 		B31_0eb5(lighten);
 	}
-//	LDY #$05
-//@UNKNOWN4:
-//	LDX #$1F
-//@UNKNOWN5:
-//	SEC
-//	LDA $0500,X
-//	SBC $0520,X
-//	BEQ @UNKNOWN10
-//	AND #$0F
-//	BNE @UNKNOWN6
-//	BCS @UNKNOWN7
-//	LDA $0500,X
-//	ADC #$10
-//	BPL @UNKNOWN9
-//@UNKNOWN6:
-//	LDA $0520,X
-//	AND #$0F
-//	CMP #$0D
-//	BCC @UNKNOWN8
-//@UNKNOWN7:
-//	LDA $0500,X
-//	SBC #$10
-//	BCS @UNKNOWN9
-//	LDA #$0F
-//	BPL @UNKNOWN9
-//@UNKNOWN8:
-//	PHA
-//	LDA $0500,X
-//	AND #$30
-//	STA $0500,X
-//	PLA
-//	ORA $0500,X
-//@UNKNOWN9:
-//	STA $0500,X
-//@UNKNOWN10:
-//	DEX
-//	BPL @UNKNOWN5
-//	TYA
-//	TAX
-//	JSR B31_0eb5
-//	DEY
-//	CPY #$01
-//	BNE @UNKNOWN4
-//	RTS
 }
 
 //UNKNOWN_EE7F:
@@ -6616,7 +6703,7 @@ void BackupPalette() @safe {
 
 void B31_0eb5(ubyte count) @safe {
 	//glorified QueuePaletteUpdate
-	nmi_queue[0] = 4;
+	nmi_queue[0] = NMI_COMMANDS.UPDATE_PALETTE;
 	nmi_queue[1] = 0;
 	nmi_data_offset = 0;
 	new_animation_timer = 0x80;
@@ -7140,7 +7227,7 @@ bool unknownF202() @safe {
 //	JSR UNKNOWN_F239
 //	JSR ClearSprites
 //	JSR ClearTilemaps
-//	JSR UNKNOWN_EC65
+//	JSR B31_0c65
 //	JSR UNKNOWN_17A000
 //	JSR UNKNOWN_ECA3
 	//assert(0, "NYI");
@@ -7486,7 +7573,7 @@ void LoadPaletteFrom(ubyte[] palette) @safe {
 }
 
 void QueuePaletteUpdate() @safe {
-	nmi_queue[0] = 4;
+	nmi_queue[0] = NMI_COMMANDS.UPDATE_PALETTE;
 	nmi_queue[1] = 0;
 	nmi_data_offset = 0;
 	new_animation_timer = 0x80;
@@ -7984,41 +8071,41 @@ NMI_ProcessCommands:
 		nmi_queue[nmi_y] &= 0x7f;
 	} else {
 		switch (nmi_queue[nmi_y]) {
-			case 0:
+			case NMI_COMMANDS.SKIP:
 				goto NMI_ProcessCommands;
-			case 1:
+			case NMI_COMMANDS.NOTHING:
 				NMI_Nothing();
 				goto NMI_ProcessCommands;
-			case 2:
+			case NMI_COMMANDS.BRANCH:
 				NMI_Branch();
 				goto NMI_ProcessCommands;
-			case 3:
+			case NMI_COMMANDS.GOTO:
 				NMI_Goto();
 				goto NMI_ProcessCommands;
-			case 4:
+			case NMI_COMMANDS.UPDATE_PALETTE:
 				NMI_UpdatePalette();
 				goto NMI_ProcessCommands;
-			case 5:
+			case NMI_COMMANDS.PPU_WRITE:
 				NMI_PPUWrite();
 				goto NMI_ProcessCommands;
-			case 6:
+			case NMI_COMMANDS.PPU_WRITE_32:
 				NMI_PPUWrite32();
 				goto NMI_ProcessCommands;
-			case 7:
+			case NMI_COMMANDS.PPU_WRITE_ADDRS:
 				NMI_PPUWriteAddrs();
 				goto NMI_ProcessCommands;
-			case 8:
+			case NMI_COMMANDS.PPU_WRITE_BYTE:
 				NMI_PPUWriteByte();
 				goto NMI_ProcessCommands;
-			case 9:
+			case NMI_COMMANDS.PPU_READ:
 				NMI_PPURead();
 				goto NMI_ProcessCommands;
-			version(original){
-			} else {
-			case 10:
+			//version(original){
+			//} else {
+			case NMI_COMMANDS.PPU_READ_TEXT:
 				NMI_PPUReadText();
 				goto NMI_ProcessCommands;
-			}
+			//}
 			default:
 				return;
 		}
@@ -8062,30 +8149,30 @@ NMI_Schedule_IRQs:
 	ubyte old_prg_lo = current_banks[6];
 	ubyte old_prg_hi = current_banks[7];
 
-	version(original){
-	} else {
+	//version(original){
+	//} else {
 		if (melody_timer != 0){
 			bankSwap(((melody_timer >> 1) & 3) | 0x44, MMC3Bank.chr1000);
 			bankSwap(((melody_timer >> 1) & 3) | 0x44, MMC3Bank.chr1400);
 			melody_timer--;
 		}
-	}
+	//}
 
 	BankswitchMusic();
-	//Music_Tick();
+	Music_Tick();
 
 	if ((oam_and_300_clear_flag & 0x80) == 0){
 		frameskip_this_frame = UNK_E7 & 0x3f;
 		if (current_animation_timer == 0){
-			//FlickerSpritesInSet2();
+			FlickerSpritesInSet2();
 		} else {
-			if (frameskip_this_frame <= current_animation_timer){
+			if ((current_animation_timer - frameskip_this_frame) -1 < 0){
 				frameskip_this_frame = (current_animation_timer - 1) & 0xff;
 				current_animation_timer = 0;
 			} else {
-				current_animation_timer -= frameskip_this_frame;
+				current_animation_timer -= frameskip_this_frame + 1;
 			}
-			//SpriteObjectsToOam();
+			SpriteObjectsToOam();
 		}
 	}
 	bankSwap(old_prg_hi, MMC3Bank.prgA000);
@@ -8095,7 +8182,7 @@ NMI_Schedule_IRQs:
 	//mmc3
 	//nes.BANKSELECT = bankswitch_mode | bankswitch_flags;
 
-	//ReadPads();
+	ReadPads();
 
 	pad1_forced |= pad1_press;
 	pad2_forced |= pad2_press;
@@ -8131,7 +8218,6 @@ void NMI_UpdatePalette() @safe {
 		nes.PPUDATA = palette_queue[i];
 	}
 
-
 	nes.PPUADDR = 0x3F00 >> 8;
 	nes.PPUADDR = (0x3F00) & 0xff;
 
@@ -8144,14 +8230,14 @@ void NMI_UpdatePalette() @safe {
 void NMI_PPUWrite() @safe {
 	do {
 		NMI_WritePPUBytes();
-	} while (nmi_queue[nmi_y] == 5);
+	} while (nmi_queue[nmi_y] == NMI_COMMANDS.PPU_WRITE);
 }
 
 void NMI_PPUWrite32() @safe {
 	nes.PPUCTRL = ram_PPUCTRL | 4;
 	do {
 		NMI_WritePPUBytes();
-	} while (nmi_queue[nmi_y] == 6);
+	} while (nmi_queue[nmi_y] == NMI_COMMANDS.PPU_WRITE_32);
 	nes.PPUCTRL = ram_PPUCTRL;
 }
 
@@ -8202,8 +8288,8 @@ void NMI_PPURead() @safe {
 	}
 }
 
-version(original){
-} else {
+//version(original){
+//} else {
 void NMI_PPUReadText() @safe {
 	ubyte old_bankswitch_mode = bankswitch_mode;
 	ubyte old_tileset1 = current_banks[4];
@@ -8227,7 +8313,7 @@ void NMI_PPUReadText() @safe {
 	//mmc3
 	//nes.BANKSELECT = bankswitch_flags | bankswitch_mode;
 }
-}
+//}
 
 void NMI_WritePPUBytes() @safe {
 	nmi_y++;
@@ -8281,371 +8367,560 @@ void NMI_WritePPUBytes() @safe {
 		nmi_y++;
 		UNK_C0[3]--;
 	}
+	return;
 }
 
-//UNKNOWN_FA81:
-//	LDA #$15
-//	LDX #BANK::PRG8000
-//	JSR BANK_SWAP
-//	LDA #$00
-//	STA $CE
-//	STA $CF
-//	LDX $E1
-//	BIT $E7
-//	BVC @UNKNOWN1
-//	LDY #$00
-//@UNKNOWN0:
-//	CLC
-//	LDA ($E8),Y
-//	ADC $CE
-//	STA $CE
-//	INY
-//	CLC
-//	LDA ($E8),Y
-//	ADC $CF
-//	STA $CF
-//	INY
-//	DEX
-//	BPL @UNKNOWN0
-//	CLC
-//	TYA
-//	ADC $E8
-//	STA $E8
-//	LDA #$00
-//	ADC $E9
-//	STA $E9
-//	JMP $FAC9
-//@UNKNOWN1:
-//	CLC
-//	LDA $E8
-//	ADC $CE
-//	STA $CE
-//	CLC
-//	LDA $E9
-//	ADC $CF
-//	STA $CF
-//	DEX
-//	BPL @UNKNOWN1
-//	CLC
-//	LDA $CE
-//	BMI @UNKNOWN2
-//	ADC $FD
-//	STA $FD
-//	BCC @UNKNOWN4
-//	BCS @UNKNOWN3
-//@UNKNOWN2:
-//	ADC $FD
-//	STA $FD
-//	BCS @UNKNOWN4
-//@UNKNOWN3:
-//	LDA $FF
-//	EOR #$01
-//	STA $FF
-//@UNKNOWN4:
-//	CLC
-//	LDA $CF
-//	BMI @UNKNOWN5
-//	ADC #$10
-//	ADC $FC
-//	BCC @UNKNOWN6
-//	BCS @UNKNOWN7
-//@UNKNOWN5:
-//	ADC $FC
-//	BCS @UNKNOWN7
-//@UNKNOWN6:
-//	ADC #$F0
-//@UNKNOWN7:
-//	STA $FC
-//	LDA $E2
-//	AND #$3F
-//	EOR #$20
-//	STA $E2
-//	LDA #$00
-//	STA $CC
-//	STA $E4
-//	LDA #$08
-//	STA $CD
-//	LDX #$10
-//	LDY $CC
-//	LDA $0300,Y
-//	AND #$3F
-//	BNE @UNKNOWN8
-//	JMP $FC5C
-//@UNKNOWN8:
-//	STA $C0
-//	STX $C2
-//	LDA $0301,Y
-//	AND #$C0
-//	STA $C1
-//	TXA
-//	LSR
-//	LSR
-//	ORA $C1
-//	STA $0301,Y
-//	SEC
-//	LDA #$00
-//	SBC $CE
-//	STA $C8
-//	SEC
-//	LDA #$00
-//	SBC $CF
-//	STA $CA
-//	LDX $E1
-//	BIT $C1
-//	BVC @UNKNOWN10
-//	LDA $0304,Y
-//	STA $C4
-//	LDA $0305,Y
-//	STA $C5
-//	LDY #$00
-//@UNKNOWN9:
-//	CLC
-//	LDA ($C4),Y
-//	ADC $C8
-//	STA $C8
-//	INY
-//	CLC
-//	LDA ($C4),Y
-//	ADC $CA
-//	STA $CA
-//	INY
-//	DEX
-//	BPL @UNKNOWN9
-//	CLC
-//	TYA
-//	ADC $C4
-//	LDY $CC
-//	STA $0304,Y
-//	LDA #$00
-//	ADC $C5
-//	STA $0305,Y
-//	JMP $FB83
-//@UNKNOWN10:
-//	CLC
-//	LDA $0304,Y
-//	ADC $C8
-//	STA $C8
-//	CLC
-//	LDA $0305,Y
-//	ADC $CA
-//	STA $CA
-//	DEX
-//	BPL @UNKNOWN10
-//	LDX $C2
-//	CLC
-//	LDA $C8
-//	BMI @UNKNOWN11
-//	ADC $0302,Y
-//	STA $C8
-//	STA $0302,Y
-//	BCC @UNKNOWN13
-//	BCS @UNKNOWN12
-//@UNKNOWN11:
-//	ADC $0302,Y
-//	STA $C8
-//	STA $0302,Y
-//	BCS @UNKNOWN13
-//@UNKNOWN12:
-//	LDA $0300,Y
-//	EOR #$80
-//	STA $0300,Y
-//@UNKNOWN13:
-//	CLC
-//	LDA $CA
-//	BMI @UNKNOWN14
-//	ADC $0303,Y
-//	STA $CA
-//	STA $0303,Y
-//	BCC @UNKNOWN16
-//	BCS @UNKNOWN15
-//@UNKNOWN14:
-//	ADC $0303,Y
-//	STA $CA
-//	STA $0303,Y
-//	BCS @UNKNOWN16
-//@UNKNOWN15:
-//	LDA $0301,Y
-//	EOR #$80
-//	STA $0301,Y
-//@UNKNOWN16:
-//	LDA $0300,Y
-//	AND #$80
-//	STA $C9
-//	LDA $0301,Y
-//	AND #$80
-//	STA $CB
-//	LDA $0306,Y
-//	STA $C6
-//	LDA $0307,Y
-//	STA $C7
-//	LDY #$00
-//	LDA ($C6),Y
-//	STA $C4
-//	INY
-//	LDA ($C6),Y
-//	STA $C5
-//	INY
-//	LDA ($C6),Y
-//	STA $C2
-//	INY
-//	LDA ($C6),Y
-//	STA $C3
-//	LDY #$00
-//@UNKNOWN17:
-//	LDA ($C4),Y
-//	INY
-//	CLC
-//	ADC $C8
-//	STA $0203,X
-//	ROR
-//	EOR $C9
-//	BMI @UNKNOWN19
-//	LDA ($C4),Y
-//	CLC
-//	ADC $CA
-//	STA $0200,X
-//	ROR
-//	EOR $CB
-//	BMI @UNKNOWN18
-//	CMP #$F0
-//	BCC @UNKNOWN20
-//	BCS @UNKNOWN19
-//@UNKNOWN18:
-//	CMP #$F9
-//	BCS @UNKNOWN20
-//@UNKNOWN19:
-//	INY
-//	INY
-//	INY
-//	JMP $FC58
-//@UNKNOWN20:
-//	INY
-//	LDA ($C4),Y
-//	STA $C1
-//	LDA $C3
-//	LSR $C1
-//	BCC @UNKNOWN21
-//	LSR
-//	LSR
-//@UNKNOWN21:
-//	LSR $C1
-//	BCC @UNKNOWN22
-//	LSR
-//	LSR
-//	LSR
-//	LSR
-//@UNKNOWN22:
-//	AND #$03
-//	ASL $C1
-//	ASL $C1
-//	ORA $C1
-//	STA $0202,X
-//	INY
-//	AND #$10
-//	BEQ @UNKNOWN23
-//	LDA $C2
-//@UNKNOWN23:
-//	ADC ($C4),Y
-//	STA $0201,X
-//	INY
-//	INX
-//	INX
-//	INX
-//	INX
-//	BEQ UNKNOWN_FA81_RET
-//	DEC $C0
-//	BNE @UNKNOWN17
-//	CLC
-//	LDA $CD
-//	BMI @UNKNOWN24
-//	ADC $CC
-//	STA $CC
-//	BEQ UNKNOWN_FC8A
-//	CMP $E3
-//	BEQ @UNKNOWN25
-//	JMP $FB0B
-//@UNKNOWN24:
-//	ADC $CC
-//	STA $CC
-//	CMP $E3
-//	BCC UNKNOWN_FC8A
-//	JMP $FB0B
-//@UNKNOWN25:
-//	STX $E4
-//	LDA $E2
-//	AND #$20
-//	BNE @UNKNOWN26
-//	LDA #$F8
-//	STA $CC
-//	STA $CD
-//@UNKNOWN26:
-//	JMP $FB0B
+ubyte obj_count; //UNK_C0
+void SpriteObjectsToOam() @safe {
+	ubyte temp_oamslot; //UNK_C0+1
+	ubyte spritetiles_attr; //UNK_C0+1
+	ubyte oam_offset_scratch; //UNK_C0+2
+	ubyte spritedef_base_tile; //UNK_C0+2
+	ubyte spritedef_palettes; //UNK_C0+3
+	SpriteTile[] spritetiles_pointer; //UNK_C0+4
+	SpritePointerDef* spritedef_pointer; //UNK_C0+6
+	ubyte wip_velx; //UNK_C0+8
+	ubyte wip_value_x2; //UNK_C0+9
+	ubyte wip_vely; //UNK_C0+10
+	ubyte wip_value_y2; //UNK_C0+11
+	ubyte current_sprite; //UNK_C0+12
+	ubyte adder; //UNK_C0+13
+	ubyte UNK_CE; //UNK_C0+14
+	ubyte UNK_CF; //UNK_C0+15
+
+	ubyte temp_a = 0;
+	ubyte temp_y = 0;
+	int full_num = 0;
+
+    //swap to the sprite bank
+	bankSwap(0x15, MMC3Bank.prg8000);
+
+    UNK_CE = 0;
+    UNK_CF = 0;
+
+    //x = frameskip_this_frame
+	ubyte temp_x = frameskip_this_frame;
+
+    //if UNK_E7 & 0x40, then...
+	if (UNK_E7 & 0x40){
+		// The camera is in shake mode. shift_x and shift_y together form a 16-bit pointer
+		// to a list of value pairs to add up.
+		// Iterate through all frameskip_this_frame+1 value pairs of the list and add them up,
+		// and put the results in UNK_CE and UNK_CF
+
+		//TODO:... what? how? when?
+		//prove this is used and then we can talk about implementing it
+		// while(temp_x > 0x7F;){
+		// 	clc
+		// 	lda (shift_x), y
+		// 	adc UNK_CE
+		// 	sta UNK_CE
+		// 	iny
+		// 	clc
+		// 	lda (shift_x), y
+		// 	adc UNK_CF
+		// 	sta UNK_CF
+		// 	temp_y++;
+		// 	temp_x--;
+		// }
+		// ; update shift_x to point to just after what we read and summed
+		// clc
+		// tya
+		// adc shift_x
+		// sta shift_x
+		// lda #0
+		// adc shift_y
+		// sta shift_y
+	} else {
+		// otherwise, if (UNK_E7 & 0x40) == 0, the camera is in plain old velocity mode.
+		// shift_x and shift_y are 8-bit constants.
+		// Multiply them by frameskip_this_frame+1, and put the results in UNK_CE and UNK_CF
+		while(temp_x != 0xFF){
+			UNK_CE += shift_x;
+			UNK_CF += shift_y;
+			temp_x--;
+		}
+	}
+
+	int scroll_mod = UNK_CE + scroll_x;
+	bool ninth_bit = scroll_mod > 0xff;
+    // if UNK_CE is non-negative...
+	if (UNK_CE < 0x80){
+		// then move scroll_x right by that much
+		//and update PPUCTRL appropriately if that overflows into the "9th bit" of scrolling position
+		if (ninth_bit){
+			goto x_nametable_bit_wrong;
+		}
+	} else {
+		// Otherwise, if we're scrolling left, the carry conditions are flipped.
+		// If scroll_x is $ff and we move the scrolling position by -1, that will set carry,
+		// because the result of the addition is 0xFF + 0xFF == 0x1FE.
+		// If scroll_x is $00 and we move the scrolling position by -1, that won't set carry,
+		// because the result of the addition is 0 + 0xFF == 0x0FF.
+		// So we only change screens when the carry flag is clear
+		if (!ninth_bit){
+			x_nametable_bit_wrong:
+			//flip base nametable addr
+			ram_PPUCTRL ^= 1;
+		}
+	}
+	scroll_x = cast(ubyte) scroll_mod;
+
+
+	scroll_mod = UNK_CF + scroll_y;
+	ninth_bit = scroll_mod > 0xff;
+    // For scroll_y, we don't care about changing screens, but we do need to handle overflow
+    // specially, because the height of the screen is 240 and our addition is mod 256.
+	if (UNK_CF < 0x80){
+		// UNK_CF is non-negative, so we're scrolling downward.
+		// Set A to the correct value if an overflow past the height of the screen occurred,
+		// and set carry to whether the overflow occurred.
+		// (This first addition can never overflow and set the carry bit. UNK_CF is at most 0x7F.)
+
+		scroll_mod += 0x10;
+		ninth_bit = scroll_mod > 0xff;
+		if (!ninth_bit){
+			goto scroll_y_wrong;
+		}
+	} else {
+		// UNK_CF is negative, so we're scrolling upward.
+		// Set A to the correct value if an overflow past the height of the screen did *not* occur,
+		// and set carry if no overflow occurred.
+		// If scroll_y = 0 and UNK_CF = -1, carry will not be set (0 + 0xFF == 0x0FF)
+		// If scroll_y = 1 and UNK_CF = -1, carry will be set (1 + 0xFF == 0x100)
+		if (!ninth_bit){
+			scroll_y_wrong:
+			// The correction for both the up and down cases is the same.
+			scroll_mod += 0xf0;
+		}
+	}
+	scroll_y = cast(ubyte) scroll_mod;
+
+    // Clear oam_and_300_clear_flag.6 and oam_and_300_clear_flag.7 to 0
+    // Flip oam_and_300_clear_flag.5 too?
+	oam_and_300_clear_flag &= 0x3f;
+	oam_and_300_clear_flag ^= 0x20;
+
+    //this is the current SPRITE_OBJECT
+    current_sprite = 0;
+    oam_set2_start = 0;
+
+    //this is how much current_sprite will increment by
+    adder = 8;
+
+    // Reserve the first 4 sprites in OAM for system stuff
+    temp_x = 4*4;
+WriteSPRObjectsToOam:
+    // Does this object has a nonzero number of sprites?
+    temp_y = current_sprite;
+    //lda SPRITE_OBJECTS+SpriteObject::count_flags, y
+	temp_a = SPRITE_OBJECTS[temp_y/8].count_flags & SPRITE_OBJECT_COUNT_MASK;
+    //if it is nonzero, process all of the hardware sprites
+	if (temp_a == 0){
+		//else, jump
+		goto spriteobject_handled;
+	}
+
+    //obj_count = number of OBJs
+    obj_count = temp_a;
+
+    //oam_offset_scratch = x
+    oam_offset_scratch = temp_x;
+
+    // Replace this SpriteObject's OAM slot with the correct index, preserving flags in the upper bytes
+    temp_a = SPRITE_OBJECTS[temp_y/8].oam_slot_flags;
+    temp_a &= 0xC0;
+    temp_oamslot = temp_a;
+	temp_a = temp_x;
+	temp_a >>= 2;
+    temp_a |= temp_oamslot;
+	SPRITE_OBJECTS[temp_y/8].oam_slot_flags = temp_a;
+
+    wip_velx = cast(ubyte) -UNK_CE;
+    wip_vely = cast(ubyte) -UNK_CF;
+
+    temp_x = frameskip_this_frame;
+    //if oam_slot & SPRITE_OBJECT_SHAKE_ENABLED, handle shaking
+	if (temp_oamslot & SPRITE_OBJECT_SHAKE_ENABLED){
+		//im gonna be so honest ill worry about this later.
+		//i hate pointer math in compiled langauges
+	// 	//get (shake) pointer to c4
+	// 	lda SPRITE_OBJECTS+SpriteObject::shake_ptr, y
+	// 	sta spritetiles_pointer
+	// 	lda SPRITE_OBJECTS+SpriteObject::shake_ptr+1, y
+	// 	sta spritetiles_pointer+1
+
+	// 	ldy #0
+	// @shake_loop_probably:
+	// 	//wip_velx += spritetiles_pointer[y]
+	// 	clc
+	// 	lda (spritetiles_pointer), y
+	// 	adc wip_velx
+	// 	sta wip_velx
+	// 	iny
+
+	// 	//wip_vely += spritetiles_pointer[y]
+	// 	clc
+	// 	lda (spritetiles_pointer), y
+	// 	adc wip_vely
+	// 	sta wip_vely
+	// 	iny
+
+	// 	// Do this frameskip_this_frame+1 times
+	// 	dex
+	// 	bpl @shake_loop_probably
+
+	// 	//add new y to SPRITE_OBJECTS[y].shakepointer
+	// 	//this updates the pointer for next shake
+	// 	clc
+	// 	tya
+	// 	adc spritetiles_pointer
+	// 	ldy current_sprite
+	// 	sta SPRITE_OBJECTS+SpriteObject::shake_ptr, y
+	// 	lda #0
+	// 	adc spritetiles_pointer+1
+	// 	sta SPRITE_OBJECTS+SpriteObject::shake_ptr+1, y
+	} else {
+		while(temp_x != 0xff){
+			wip_velx += SPRITE_OBJECTS[temp_y/8].velocity.x;
+			wip_vely += SPRITE_OBJECTS[temp_y/8].velocity.y;
+			temp_x--;
+		}
+	}
+
+    // Restore X to its old value, we're done using it for loop counters
+    temp_x = oam_offset_scratch;
+
+    // if the total X velocity is positive or 0...
+    temp_a = wip_velx;
+	full_num = temp_a + SPRITE_OBJECTS[temp_y/8].position.x;
+	ninth_bit = full_num > 0xff;
+	if (temp_a < 0x80){
+		// then, after we add this velocity to the sprite's position...
+		// (and set wip_velx to the sprite's new X position)
+		wip_velx = cast(ubyte) full_num;
+		SPRITE_OBJECTS[temp_y/8].position.x = wip_velx;
+
+		// the carry flag will be set if we overflowed the position out of the [0, 255] range
+		if (ninth_bit){
+			goto x_pos_wrong;
+		}
+	} else {
+		// otherwise, if the total X velocity is negative,
+		// then after we add this velocity to the sprite's position...
+		// (and set wip_velx to the sprite's new X position)
+		wip_velx = cast(ubyte) full_num;
+		SPRITE_OBJECTS[temp_y/8].position.x = wip_velx;
+
+		// the carry flag will be clear if we overflowed the position out of the [0, 255] range
+		// (see previous bcc/bcs pairs for a worked example of the math)
+		if (!ninth_bit){
+			x_pos_wrong:
+			// When the X position of the sprite object overflows, that means it's gone
+			// from off-screen to on-screen, or vice versa.
+			SPRITE_OBJECTS[temp_y/8].count_flags ^= SPRITE_OBJECT_OFFSCREEN_X_DIR;
+		}
+	}
+
+    temp_a = wip_vely;
+	full_num = temp_a + SPRITE_OBJECTS[temp_y/8].position.y;
+	ninth_bit = full_num > 0xff;
+	if (temp_a < 0x80){
+    	// Y velocity is non-negative
+		wip_vely = cast(ubyte) full_num;
+		SPRITE_OBJECTS[temp_y/8].position.y = wip_vely;
+
+    	// Carry clear means no overflow
+		if (ninth_bit){
+			goto y_pos_wrong;
+		}
+	} else {
+    	// Y velocity is negative
+		wip_vely = cast(ubyte) full_num;
+		SPRITE_OBJECTS[temp_y/8].position.y = wip_vely;
+
+    	// Carry set means no overflow
+		if (!ninth_bit){
+			y_pos_wrong:
+    		// When the Y position of the sprite object overflows, that means it's gone
+    		// from off-screen to on-screen, or vice versa.
+			SPRITE_OBJECTS[temp_y/8].count_flags ^= SPRITE_OBJECT_OFFSCREEN_Y_DIR;
+		}
+	}
+
+    // Isolate the "off-screen" conditions we just set
+    wip_value_x2 = SPRITE_OBJECTS[temp_y/8].count_flags & SPRITE_OBJECT_OFFSCREEN_X_DIR;
+    wip_value_y2 = SPRITE_OBJECTS[temp_y/8].oam_slot_flags & SPRITE_OBJECT_OFFSCREEN_Y_DIR;
+
+    // Copy the sprite definition pointer, so that we can read through the sprite def
+    spritedef_pointer = SPRITE_OBJECTS[temp_y/8].spriteDef;
+
+    // First in the sprite def is the pointer to the sprite arrangement data
+    spritetiles_pointer = *spritedef_pointer.pointer;
+
+    // Then the ID of the sprite def's base tile ID, if any
+    spritedef_base_tile = spritedef_pointer.base_tile_id;
+
+    // Then information about palettes
+    spritedef_palettes = cast(ubyte) ((spritedef_pointer.p1 << 6) |
+	(spritedef_pointer.p2 << 4) |
+	(spritedef_pointer.p3 << 2) |
+	spritedef_pointer.p4);
+
+    // Render out the sprite arrangements/spriteTile info to shadow OAM
+    temp_y = 0;
+	render_one_oam_entry:
+    // First is the X position of the current sprite in the arrangement.
+    // Set the OAM entry's X position based on the base position of the sprite
+    // and the relative position in the spriteTile entry
+	full_num = spritetiles_pointer[temp_y/4].position.x + wip_velx;
+    temp_a = cast(ubyte) full_num;
+    temp_y++;
+    shadow_oam[temp_x/4].x = temp_a;
+    // The last addition may have overflowed, changing whether or not that OAM entry
+    // is off-screen or not.
+    // Combine this with the 9th bit of the X position/previously calculated off-screen info,
+    // to get off-screen info for this specific OAM entry
+	ninth_bit = full_num > 0xff;
+    temp_a = ((full_num & 0x100) >> 1) | (temp_a >> 1);
+    temp_a ^= wip_value_x2;
+	if (ninth_bit){
+		goto is_offscreen;
+	}
+
+    // Next is the Y position of the current sprite in the arrangement.
+    // Handle it similar to X position
+	full_num = spritetiles_pointer[temp_y/4].position.y + wip_vely;
+    temp_a = cast(ubyte) full_num;
+    shadow_oam[temp_x/4].y = temp_a;
+    // including the overflow/off-screen/9th-position-bit handling... but with an extra twist
+	ninth_bit = full_num > 0xff;
+    temp_a = ((full_num & 0x100) >> 1) | (temp_a >> 1);
+    temp_a ^= wip_value_y2;
+    // if the 9th bit of the position of the OAM entry is clear...
+	if (ninth_bit){
+		goto B31_1c1b;
+	}
+    // ...and the OAM entry's Y position is less than 0x1E0 (???), then the sprite is on-screen
+    // XXX: Was there supposed to be a ROL after the BMI to restore the original low 8 bits?
+    // Or, better yet, replacing the BMI with ROL BCS?
+    // Checking that the OAM Y position is less than 240 makes sense, but I don't get this...
+    // There are no real consequences to getting this wrong though, just extra CPU time)
+	if (temp_a < 0xf0){
+    	goto do_normal_spritetile;
+	}
+    // Otherwise, if bit 9 of the Y position is clear and the sprite's Y position is >= 0x1E0,
+    // then it's off-screen
+    goto is_offscreen;
+
+	B31_1c1b:
+    // Otherwise, if the 9th bit of the Y position of the OAM entry is set,
+    // and the Y position is >= 0x1F2 (???), then the sprite is on-screen
+    // XXX: This branch also seems affected by the "missing ROL"/bad branch condition
+    // that doesn't restore A's value to be the original low 8 bits of the Y position?
+    // Checking that the OAM Y position is >= 0x1F9 / -7 would make more conceptual sense... but,
+    // the NES doesn't have a way to show sprites partially off the top of the screen anyway
+	if (temp_a >= 0xf9){
+    	goto do_normal_spritetile;
+	}
+    // Otherwise, the OAM entry is off-screen
+	is_offscreen:
+    // If the sprite is off-screen, we don't have to render it,
+    // so skip the Y position and remaining 2 bytes.
+    // We don't increment the offset into shadow OAM in this case.
+    temp_y++;
+    temp_y++;
+    temp_y++;
+    goto spritetile_handled;
+
+	do_normal_spritetile:
+    // We need to use the last two bytes of the spriteTile macro in order to render it.
+    // First is the byte with sprite attribute info
+    temp_y++;
+	temp_a = cast(ubyte) ((spritetiles_pointer[temp_y/4].flipY << 7) |
+	(spritetiles_pointer[temp_y/4].flipX << 6) |
+	(spritetiles_pointer[temp_y/4].priority << 5) |
+	((spritetiles_pointer[temp_y/4].tile_id_is_relative << 2) << 2) |
+	spritetiles_pointer[temp_y/4].palette);
+
+    spritetiles_attr = temp_a;
+
+    // From here, we load all the palettes that this spritedef elected to use into A...
+    temp_a = spritedef_palettes;
+    // ...and select one of the palettes by shifting right by the attr palette * 2,
+    // We do a form of long multiplication to accomplish that, by modifying spritetiles_attr
+    // First, the 1's digit. If it's a 1, shift right by 1*2=2
+	ninth_bit = spritetiles_attr & 1;
+    spritetiles_attr >>= 1;
+	if (ninth_bit){
+		temp_a >>= 2;
+	}
+    // Then, the 2's digit. If it's a 1, shift right by 2*2=4
+	ninth_bit = spritetiles_attr & 1;
+    spritetiles_attr >>= 1;
+	if (ninth_bit){
+		temp_a >>= 4;
+	}
+
+    // Isolate the ID of the chosen palette
+	temp_a &= 3;
+
+    // now that the palette choosing is done, restore the original value of spritetiles_attr,
+    // with the palette index cleared out...
+    spritetiles_attr <<= 2;
+
+    // and then OR in the actual chosen palette ID
+    temp_a |= spritetiles_attr;
+
+    // And that's the OAM attribute done... almost. There's only one more thing
+    shadow_oam[temp_x/4].attributes = temp_a;
+
+    temp_y++;
+    // We have two ways of describing tile IDs (global in a CHR page, and relative to a base tile)
+    // Which method to use is determined by the unused bit 4 of the attribute byte
+    // If the BEQ here is taken, then a tile ID of 0 is used for the base tile ID.
+    temp_a &= 0x10;
+	if (temp_a != 0){
+    	temp_a = spritedef_base_tile;
+	}
+	temp_a += spritetiles_pointer[temp_y/4].id;
+    shadow_oam[temp_x/4].index = temp_a;
+
+    // We've gotten through the entire spriteTile / OAM entry
+    temp_y++;
+
+    // We've put a valid sprite in OAM
+    temp_x++;
+    temp_x++;
+    temp_x++;
+    temp_x++;
+
+    // If we've used every available sprite index in OAM, then our work is done
+	if (temp_x == 0){
+		return;
+	}
+    // otherwise...
+	spritetile_handled:
+    // if there are any more OBJs to potentially draw, try drawing them
+    obj_count--;
+	if (obj_count != 0){
+		goto render_one_oam_entry;
+	}
+    // otherwise, we're done with this SpriteObject
+	spriteobject_handled:
+    // Let's move on to the next SpriteObject
+    // If we're progressing forwards through the SpriteObject array...
+    temp_a = adder;
+	if (temp_a > 0x7f){
+		goto progressing_backwards;
+	}
+    // then, after advancing to the next SpriteObject...
+	temp_a += current_sprite;
+    current_sprite = temp_a;
+    // ...end if we've made it to the end of the SpriteObject page
+	if (temp_a == 0){
+		temp_x = ClearOam(temp_x);
+		return;
+	}
+    //.assert <SPRITE_OBJECTS_END = 0, error, "SpriteObject rendering assumes SPRITE_OBJECTS ends at a page boundary"
+    // Otherwise, if we're progressing forwards through the array and we've hit the
+    // beginning of the second set of SpriteObjects, begin iterating backwards through them
+	if (temp_a == sprite_object_set2_start){
+		goto begin_second_half_of_sprite_objects;
+	}
+    // Otherwise, continue the loop
+	goto WriteSPRObjectsToOam;
+
+	progressing_backwards:
+    // If we're progressing backwards, through the second set of SpriteObjects,
+    // then, after advancing to the "previous" SpriteObject...
+	temp_a += current_sprite;
+    current_sprite = temp_a;
+    // ...end if we've made it to the "beginning" of the second set of SpriteObjects
+	if (temp_a < sprite_object_set2_start){
+		temp_x = ClearOam(temp_x);
+		return;
+	}
+    // Otherwise, continue the loop
+    goto WriteSPRObjectsToOam;
+
+	begin_second_half_of_sprite_objects:
+    // Save the OAM offset that marks the dividing line between the two sets of SpriteObjects
+    oam_set2_start = temp_x;
+    // if oam_and_300_clear_flag & 0x20, render this second set of SpriteObjects starting from the beginning
+    temp_a = oam_and_300_clear_flag;
+    temp_a &= 0x20;
+
+	if (temp_a == 0){
+		// Otherwise, render them starting from the end (to implement sprite flickering)
+		//.assert <SPRITE_OBJECTS_END = 0, error, "SpriteObject rendering assumes SPRITE_OBJECTS ends at a page boundary"
+		temp_a = cast(ubyte) -8;
+		current_sprite = temp_a;
+		adder = temp_a;
+	}
+    // With everything set up, continue looping and rendering SpriteObjects to OAM
+    goto WriteSPRObjectsToOam;
+}
 
 /**
  * Original_Address: $(DOLLAR) $FC8A, bank $1F
  */
-void ClearOam() @safe {
-	for (ubyte i = 0; i < shadow_oam.length; i++) {
+ubyte ClearOam(ubyte x) @safe {
+	for (ubyte i = x/4; i < shadow_oam.length; i++) {
 		shadow_oam[i].y = 0xF0;
+		x += 4;
 	}
+	return x;
 }
 
-//UNKNOWN_FC96:
-//	LDA $E2
-//	EOR #$40
-//	STA $E2
-//	LDY #$FC
-//	LDX $E4
-//	BNE @UNKNOWN1
-//	RTS
-//@UNKNOWN0:
-//	LDA $0200,X
-//	PHA
-//	LDA $0200,Y
-//	STA $0200,X
-//	PLA
-//	STA $0200,Y
-//	INX
-//	INY
-//	LDA $0200,X
-//	PHA
-//	LDA $0200,Y
-//	STA $0200,X
-//	PLA
-//	STA $0200,Y
-//	INX
-//	INY
-//	LDA $0200,X
-//	PHA
-//	LDA $0200,Y
-//	STA $0200,X
-//	PLA
-//	STA $0200,Y
-//	INX
-//	INY
-//	LDA $0200,X
-//	PHA
-//	LDA $0200,Y
-//	STA $0200,X
-//	PLA
-//	STA $0200,Y
-//	INX
-//	TYA
-//	SEC
-//	SBC #$07
-//	TAY
-//@UNKNOWN1:
-//	STY $C0
-//	CPX $C0
-//	BCC @UNKNOWN0
-//	RTS
+void FlickerSpritesInSet2() @safe {
+    oam_and_300_clear_flag ^= 0x40;
+
+    ubyte temp_y = 0xfc;
+    ubyte temp_x = oam_set2_start;
+
+	if (oam_and_300_clear_flag == 0){
+		return;
+	}
+	while (1){
+		obj_count = temp_y;
+		if (temp_x >= obj_count){
+			break;
+		}
+		// swap first byte and increment
+		ubyte stasher = shadow_oam[temp_x/4].y;
+		shadow_oam[temp_x/4].y = shadow_oam[temp_y/4].y;
+		shadow_oam[temp_y/4].y = stasher;
+		temp_x++;
+		temp_y++;
+		// swap second byte and increment
+		stasher = shadow_oam[temp_x/4].index;
+		shadow_oam[temp_x/4].index = shadow_oam[temp_y/4].index;
+		shadow_oam[temp_y/4].index = stasher;
+		temp_x++;
+		temp_y++;
+		// swap third byte and increment
+		stasher = shadow_oam[temp_x/4].attributes;
+		shadow_oam[temp_x/4].attributes = shadow_oam[temp_y/4].attributes;
+		shadow_oam[temp_y/4].attributes = stasher;
+		temp_x++;
+		temp_y++;
+		// swap fourth byte
+		stasher = shadow_oam[temp_x/4].x;
+		shadow_oam[temp_x/4].x = shadow_oam[temp_y/4].x;
+		shadow_oam[temp_y/4].x = stasher;
+		// increment X to the next OAM entry, move Y back to the previous OAM entry
+		temp_x++;
+		temp_y -= 7;
+	}
+}
 
 /**
  * Original_Address: $(DOLLAR) $FCEE, bank $1F
  */
 void MemoryInit() @safe {
 	//lol
-	ClearOam();
+	ClearOam(0);
 	nes.PPUCTRL = 0x08;
 	ram_PPUCTRL = 0x08;
 
@@ -8663,10 +8938,10 @@ void MemoryInit() @safe {
  * Original_Address: $(DOLLAR) $FD14, bank $1F
  */
 void MusicInit() @safe {
-	version(original) {
-	} else {
+	//version(original) {
+	//} else {
 		music_bank = 0x1C;
-	}
+	//}
 
 	BankswitchMusic();
 	return Music_Init();
@@ -8744,9 +9019,8 @@ void ClearSprites() @safe {
 void ClearTilemaps() @safe {
 	PpuSync();
 
-    //lda #NMI_COMMANDS::PPU_WRITE_BYTE
 	ushort ptr = 0x2000;
-	nmi_queue[0] = 0x08;
+	nmi_queue[0] = NMI_COMMANDS.PPU_WRITE_BYTE;
 	nmi_queue[1] = 0x80;
 	nmi_queue[2] = ptr >> 8;
 	nmi_queue[3] = ptr & 0xff;
@@ -8800,7 +9074,7 @@ void WriteProtectPRGRam() @safe {
 	//nes.PRGRAMPROTECT = 0x80;
 }
 
-//UNKNOWN_FDF3:
+//TempUpperBankswitch:
 //	PHA
 //	LDA #$FE
 //	PHA
@@ -8820,7 +9094,8 @@ void WriteProtectPRGRam() @safe {
 //	PLA
 //	LDX #BANK::PRGA000
 //	JMP BANK_SWAP
-//UNKNOWN_FE13:
+
+//IrqHandler:
 //	PHA
 //	TXA
 //	PHA
@@ -8848,7 +9123,7 @@ void WriteProtectPRGRam() @safe {
 //	PLA
 //	RTI
 
-//UNKNOWN_FE3A:
+//GotoIRQPointer:
 //	STA IRQDISABLE
 //	LDX $ED
 //	LDA $0541,X
@@ -8858,45 +9133,72 @@ void WriteProtectPRGRam() @safe {
 //	STA IRQENABLE
 //	RTS
 
-//UNKNOWN_FE4B:
-//	LDX #$01
-//@UNKNOWN0:
-//	SEC
-//@UNKNOWN1:
-//	PHP
-//	LDA #$01
-//	STA JOY1
-//	LDA #$00
-//	STA JOY1
-//	LDY #$08
-//@UNKNOWN2:
-//	LDA JOY1,X
-//	LSR
-//	ROL $C0
-//	LSR
-//	ROL $C1
-//	DEY
-//	BNE @UNKNOWN2
-//	LDA $C0
-//	ORA $C1
-//	PLP
-//	BCC @UNKNOWN3
-//	STA $DC,X
-//	CLC
-//	BCC @UNKNOWN1
-//@UNKNOWN3:
-//	CMP $DC,X
-//	BEQ @UNKNOWN4
-//	LDA $DE,X
-//@UNKNOWN4:
-//	TAY
-//	EOR $DE,X
-//	AND $DC,X
-//	STA $DC,X
-//	STY $DE,X
-//	DEX
-//	BPL @UNKNOWN0
-//	RTS
+void ReadPads() @safe {
+    //x is the controller number
+    //1 == JOY2
+    //0 == JOY1
+    //they use , x just the programmatically index
+    //like an array
+
+	for(ubyte x = 1; x != 0xff; x--){
+		ubyte results = 0;
+		for (ubyte read = 1; read != 0xff; read--){
+			//start poll
+			nes.JOY1 = 1;
+			//clear poll
+			nes.JOY1 = 0;
+
+			// read 8 bits of normal controller input
+			for (ubyte bits = 8; bits != 0; bits--){
+				ubyte input = 0;
+				if (x == 0){
+					input = nes.JOY1;
+				} else {
+					input = nes.JOY2;
+				}
+				// read both from the normal controller port (stored in UNK_C0)
+				// and the Famicom's expansion ports (stored in UNK_C0+1)
+				UNK_C0[0] = cast(ubyte) ((input & 1) | (UNK_C0[0] << 1));
+				input >>= 1;
+				UNK_C0[1] = cast(ubyte) ((input & 1) | (UNK_C0[1] << 1));
+				input >>= 1;
+			}
+			// combine the results
+			results = UNK_C0[0] | UNK_C0[1];
+			// If we've only read the controller port once this frame, store our results
+			// and read them again to account for potential DPCM conflict
+			if (read == 1){
+				if (x == 0){
+					pad1_press = results;
+				} else {
+					pad2_press = results;
+				}
+			}
+		}
+
+		if (x == 0){
+			// If the results are different this time, we ran into a DPCM conflict.
+			// Throw away these inputs and use the inputs from last frame instead
+			if (pad1_press != results){
+				results = pad1_hold;
+			}
+			ubyte y_store = results;
+			results ^= pad1_hold;
+			results &= pad1_press;
+			pad1_press = results;
+			pad1_hold = y_store;
+		} else {
+			if (pad2_press != results){
+				results = pad2_hold;
+			}
+			ubyte y_store = results;
+			results ^= pad2_hold;
+			results &= pad2_press;
+			pad2_press = results;
+			pad2_hold = y_store;
+		}
+	}
+}
 
 //UNKNOWN_FE86:
 //	LDA $DC
@@ -8975,11 +9277,11 @@ void Reset_Vector() @safe {
  * Original_Address: $(DOLLAR) $FFC5, bank $1F
  */
 void BankswitchMusic() @safe {
-	version(original){
-		bankSwap(0x1C, MMC3Bank.prg8000); //$8000
-	} else {
+	//version(original){
+	//	bankSwap(0x1C, MMC3Bank.prg8000); //$8000
+	//} else {
 		bankSwap(music_bank, MMC3Bank.prg8000); //$8000
-	}
+	//}
 	bankSwap(0x1D, MMC3Bank.prgA000); //$A000
 }
 
@@ -8993,22 +9295,22 @@ void bankSwap(ubyte bank, ubyte flags) @safe {
 	ubyte bankselect = flags | bankswitch_flags;
 	ubyte bankdata = current_banks[flags];
 
+	if ((flags & 7) >= MMC3Bank.prg8000){
+		return;
+	}
 
 	//mmc3 chr bank handling
-	import earthboundbeginnings.chr.bank8;
 	ushort actual_vram = flags & 7;
-	if (actual_vram < 2){
+	if (actual_vram < MMC3Bank.chr1000){
 		actual_vram *= 0x800;
-	} else if (actual_vram < 6){
+		writeToVRAM(get_chr_bank(bank), actual_vram);
+		bank++;
+		actual_vram += 0x400;
+		writeToVRAM(get_chr_bank(bank), actual_vram);
+	} else {
 		actual_vram = cast(ushort) ((actual_vram - 2) * 0x400);
 		actual_vram += 0x1000;
-	}
-	if (bank == 0x40){
-		writeToVRAM(bank40_41[0..0x400], actual_vram);
-	} else if (bank == 0x41){
-		writeToVRAM(bank40_41[0x400..0x800], actual_vram);
-	} else if (bank == 0x42){
-		writeToVRAM(earth_gfx, actual_vram);
+		writeToVRAM(get_chr_bank(bank), actual_vram);
 	}
 }
 
