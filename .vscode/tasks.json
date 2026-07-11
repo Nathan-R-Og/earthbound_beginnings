@@ -1,0 +1,13 @@
+{
+    "version": "2.0.0",
+    "command": "",
+    "args": [],
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "dub build -a=x86_64 -b=debug -c=application",
+            "group": "build"
+        },
+    ]
+}

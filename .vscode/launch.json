@@ -1,18 +1,16 @@
 {
-    //for the love of god get a debugger that works
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
-            "type": "cppvsdbg",
+            "type": "code-d",
             "request": "launch",
-            "program": "${workspaceRoot}/earthbound_beginnings.exe",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceRoot}",
-            "environment": [],
-            "console": "integratedTerminal",
-            "preLaunchTask": "dub build -b debug"
+            "name": "Debug D project",
+            "cwd": "${workspaceFolder}",
+            "program": "./earthbound_beginnings.exe",
+            "preLaunchTask": "Build"
         }
     ]
 }

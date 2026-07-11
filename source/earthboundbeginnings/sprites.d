@@ -3,7 +3,7 @@ module earthboundbeginnings.sprites;
 import earthboundbeginnings.ram;
 
 
-SpritePointerDef[] SPRITEDEF_EARTH = [
+shared(SpritePointerDef)[] SPRITEDEF_EARTH = [
     SpritePointerDef(&SPRITE_EARTH, 4, 0, 0, 0, 0),
     SpritePointerDef(&SPRITE_EARTH, 8, 0, 0, 0, 0),
     SpritePointerDef(&SPRITE_EARTH, 0xc, 0, 0, 0, 0),
@@ -13,7 +13,7 @@ SpritePointerDef[] SPRITEDEF_EARTH = [
     SpritePointerDef(&SPRITE_EARTH, 0x4c, 0, 0, 0, 0),
 ];
 
-__gshared SpriteTile[] SPRITE_EARTH = [
+shared SpriteTile[] SPRITE_EARTH = [
 SpriteTile(Vector2B(0x00, 0x00), 0, 1, 0, 0, 0, 0x00),
 SpriteTile(Vector2B(0x08, 0x00), 0, 1, 0, 0, 0, 0x01),
 SpriteTile(Vector2B(0x10, 0x00), 0, 1, 0, 0, 0, 0x02),

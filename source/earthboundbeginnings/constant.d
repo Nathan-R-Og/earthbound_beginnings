@@ -2,7 +2,7 @@ module earthboundbeginnings.constant;
 
 import earthboundbeginnings.chr.main;
 
-import replatform64.nes : MirrorType;
+import replatform64.nes;
 
 import earthboundbeginnings.music;
 import earthboundbeginnings.external;
@@ -21,6 +21,23 @@ ubyte tiledarea_y = 0;
 ubyte[] tiledarea_stack = [];
 ubyte working_tile = 0xa0;
 bool printing_tilepack = false;
+
+// $C000
+// DPCM samples
+//kick
+@Asset("split/us/sample/kick.bin", DataType.raw)
+immutable(ubyte)[] sample_kick;
+ubyte[] B30_0071 = [
+    0x6a,0xd5,0x44,0x44,0xad,0x44,0x44,0x44,
+    0x54,0x44,0x95,0x44,0x52,0x00,0x00,
+];
+//snare
+@Asset("split/us/sample/snare.bin", DataType.raw)
+immutable(ubyte)[] sample_snare;
+ubyte[] B30_0171 = [
+    0x42,0x34,0x26,0x54,0x44,0x44,0x04,0x44,
+    0x00,0x4a,0x44,0x00,0x00,0x00,0x00,0x00,
+];
 
 //UNKNOWN_C200:
 //	LDA #$0F
@@ -303,7 +320,7 @@ ubyte[] control_codes = [
 //UNKNOWN_C3F4:
 //    PHP
 //    JSR UNKNOWN_CFAC
-//    JSR UNKNOWN_FDC0
+//    JSR Refresh_SpriteObjects
 //    LDA #$01
 //    STA $E5
 //    LDA #$00
@@ -1584,7 +1601,7 @@ void PostInit() @safe {
 	if (unknownF202()) {
 		goto B30_0b5d;
 	}
-	unknownFD28(current_music);
+	PlayMusic(current_music);
 	if (is_scripted) {
 		BANKSET_H13();
 		unknown13AB53();
@@ -1960,60 +1977,90 @@ ubyte unknownCC9D() @safe {
 //	TXA
 //	JMP UNKNOWN_FD28
 
-//UNKNOWN_CE02:
-//	LDY #$5E
-//	LDA #$00
-//	LDX #$6C
-//UNKNOWN_CE08:
-//	STA $60
-//	STX $61
-//	JSR PpuSync
-//	TYA
-//	LDX #BANK::CHR0800
-//	JSR BANK_SWAP
-//	LDA #$09
-//	LDX #$40
-//	STA $0400
-//	STX $0401
-//	LDA #$00
-//	LDX #$18
-//	STX $0402
-//	STA $0403
-//	LDA #$00
-//	STA $0444
-//	LDX #$20
-//@UNKNOWN2:
-//	LDA #$00
-//	STA $E6
-//	LDA #$80
-//	STA $E5
-//	JSR PpuSync
-//	JSR UNKNOWN_FDE7
-//	LDY #$00
-//@UNKNOWN3:
-//	LDA $0404,Y
-//	STA ($60),Y
-//	INY
-//	CPY #$40
-//	BCC @UNKNOWN3
-//	JSR UNKNOWN_FDED
-//	CLC
-//	TYA
-//	ADC $60
-//	STA $60
-//	LDA #$00
-//	ADC $61
-//	STA $61
-//	CLC
-//	TYA
-//	ADC $0403
-//	STA $0403
-//	LDA #$00
-//	ADC $0402
-//	STA $0402
-//	DEX
-//	BNE @UNKNOWN2
-//	RTS
+void LoadNamingScreen2() @safe {
+	return B30_0e08(0x5e, 0x6c00);
+}
+
+//y == (chr) bank
+//x:a == write address
+//WriteToAddress???
+//Copy800Chr???
+//do i even need to implement this
+void B30_0e08(ubyte bank, ushort write_address) @safe {
+//     copy_amount = $40
+//     times = 32
+//     ;set UNK_60 to the write destination
+//     sta UNK_60
+//     stx UNK_60+1
+
+//     jsr PpuSync
+
+//     ;switch to bank in y reg
+//     tya
+//     ldx #BANK::CHR0800
+//     jsr BANK_SWAP
+
+//     ;add to nmi_queue
+//     ;[09 40 ($2307)]
+//     lda #9
+//     ldx #copy_amount
+//     sta nmi_queue ; PPU_READ
+//     stx nmi_queue+1 ; $40 bytes
+//     lda #.LOBYTE($1800) ; PPUADDR = $1800
+//     ldx #.HIBYTE($1800)
+//     stx nmi_queue+2
+//     sta nmi_queue+3
+//     lda #0
+//     sta nmi_queue+4+64 ; END
+//     ldx #times ; Repeat this 32 times (for a total of $800 bytes)
+// @loop:
+
+//     lda #0
+//     sta nmi_data_offset
+
+//     lda #$80
+//     sta new_animation_timer
+
+//     jsr PpuSync
+
+//     jsr EnablePRGRam
+
+//     ldy #0
+// @copy:
+//     lda nmi_queue+4, y
+//     sta (UNK_60), y
+//     iny
+//     cpy #copy_amount
+//     bcc @copy
+
+//     jsr WriteProtectPRGRam
+
+//     clc
+
+//     ;UNK_60 += $40
+//     tya
+//     adc UNK_60
+//     sta UNK_60
+//     lda #0
+//     adc UNK_60+1
+//     sta UNK_60+1
+
+//     clc
+
+//     ; nmi_queue[2:3] += $40
+//     tya
+//     adc nmi_queue+3
+//     sta nmi_queue+3
+//     lda #0
+//     adc nmi_queue+2
+//     sta nmi_queue+2
+
+//     ;x--
+//     ;if x > 0, loop
+//     dex
+//     bne @loop
+//     ;else, finish
+}
 
 //UNKNOWN_CE6D:
 //	LDA #$00
@@ -2075,21 +2122,21 @@ ubyte unknownCC9D() @safe {
  * Original_Address: $(DOLLAR) $CED3, bank $1E
  */
 void BANKSET_H13() @safe {
-	bankSwap(0x13, MMC3Bank.prgA000);
+	BANK_SWAP(0x13, MMC3Bank.prgA000);
 }
 
 /**
  * Original_Address: $(DOLLAR) $CEDA, bank $1E
  */
 void unknownCEDA() @safe {
-	bankSwap(0x17, MMC3Bank.prgA000);
+	BANK_SWAP(0x17, MMC3Bank.prgA000);
 }
 
 /**
  * Original_Address: $(DOLLAR) $CEE1, bank $1E
  */
 void BANKSET_H14() @safe {
-	bankSwap(0x14, MMC3Bank.prg8000);
+	BANK_SWAP(0x14, MMC3Bank.prg8000);
 }
 
 void BankswitchCHRFromTable(ubyte[] addr) @safe {
@@ -2098,7 +2145,7 @@ void BankswitchCHRFromTable(ubyte[] addr) @safe {
 
 	while (y != 0xff){
 		if (addr[y] != 0){
-			bankSwap(addr[y], x);
+			BANK_SWAP(addr[y], x);
 		}
 		x--;
 		y--;
@@ -3615,7 +3662,7 @@ void STORE_COORDINATES() @safe {
 
 //UNKNOWN_DA16:
 //	JSR PpuSync
-//	JSR UNKNOWN_FDC0
+//	JSR Refresh_SpriteObjects
 //	LDX #$00
 //@UNKNOWN0:
 //	JSR UNKNOWN_D9F1
@@ -8152,8 +8199,8 @@ NMI_Schedule_IRQs:
 	//version(original){
 	//} else {
 		if (melody_timer != 0){
-			bankSwap(((melody_timer >> 1) & 3) | 0x44, MMC3Bank.chr1000);
-			bankSwap(((melody_timer >> 1) & 3) | 0x44, MMC3Bank.chr1400);
+			BANK_SWAP(((melody_timer >> 1) & 3) | 0x44, MMC3Bank.chr1000);
+			BANK_SWAP(((melody_timer >> 1) & 3) | 0x44, MMC3Bank.chr1400);
 			melody_timer--;
 		}
 	//}
@@ -8175,8 +8222,8 @@ NMI_Schedule_IRQs:
 			SpriteObjectsToOam();
 		}
 	}
-	bankSwap(old_prg_hi, MMC3Bank.prgA000);
-	bankSwap(old_prg_lo, MMC3Bank.prg8000);
+	BANK_SWAP(old_prg_hi, MMC3Bank.prgA000);
+	BANK_SWAP(old_prg_lo, MMC3Bank.prg8000);
 
 	bankswitch_mode = old_bankswitch_mode;
 	//mmc3
@@ -8295,8 +8342,8 @@ void NMI_PPUReadText() @safe {
 	ubyte old_tileset1 = current_banks[4];
 	ubyte old_tileset2 = current_banks[5];
 	nmi_y++;
-	bankSwap(nmi_queue[nmi_y], MMC3Bank.chr1800);
-	bankSwap(cast(ubyte)(nmi_queue[nmi_y]+1), MMC3Bank.chr1c00);
+	BANK_SWAP(nmi_queue[nmi_y], MMC3Bank.chr1800);
+	BANK_SWAP(cast(ubyte)(nmi_queue[nmi_y]+1), MMC3Bank.chr1c00);
 
 	nes.PPUADDR = nmi_queue[nmi_y];
 	nmi_y++;
@@ -8307,8 +8354,8 @@ void NMI_PPUReadText() @safe {
 	for (ubyte i = 0; i < text_data_buffer.length; i++){
 		text_data_buffer[i] = nes.PPUDATA;
 	}
-	bankSwap(old_tileset2, MMC3Bank.chr1c00);
-	bankSwap(old_tileset1, MMC3Bank.chr1800);
+	BANK_SWAP(old_tileset2, MMC3Bank.chr1c00);
+	BANK_SWAP(old_tileset1, MMC3Bank.chr1800);
 	bankswitch_mode = old_bankswitch_mode;
 	//mmc3
 	//nes.BANKSELECT = bankswitch_flags | bankswitch_mode;
@@ -8377,8 +8424,8 @@ void SpriteObjectsToOam() @safe {
 	ubyte oam_offset_scratch; //UNK_C0+2
 	ubyte spritedef_base_tile; //UNK_C0+2
 	ubyte spritedef_palettes; //UNK_C0+3
-	SpriteTile[] spritetiles_pointer; //UNK_C0+4
-	SpritePointerDef* spritedef_pointer; //UNK_C0+6
+	shared(SpriteTile[]) spritetiles_pointer; //UNK_C0+4
+	shared(SpritePointerDef)* spritedef_pointer; //UNK_C0+6
 	ubyte wip_velx; //UNK_C0+8
 	ubyte wip_value_x2; //UNK_C0+9
 	ubyte wip_vely; //UNK_C0+10
@@ -8393,7 +8440,7 @@ void SpriteObjectsToOam() @safe {
 	int full_num = 0;
 
     //swap to the sprite bank
-	bankSwap(0x15, MMC3Bank.prg8000);
+	BANK_SWAP(0x15, MMC3Bank.prg8000);
 
     UNK_CE = 0;
     UNK_CF = 0;
@@ -8947,16 +8994,14 @@ void MusicInit() @safe {
 	return Music_Init();
 }
 
-/**
- * Original_Address: $(DOLLAR) $FD28, bank $1F
- */
-void unknownFD28(ubyte a) @safe {
-//	CMP $078C
-//	BEQ @UNKNOWN1
-//	STA UNKNOWN_07F5
-//@UNKNOWN1:
-//	JMP WaitNMI
-	//assert(0, "NYI");
+/*
+$FD28 - Play music track (without restarting, but wait next frame)
+*/
+void PlayMusic(ubyte a) @safe {
+	if (a != current_music){
+		soundqueue_track = a;
+	}
+    return WaitNMI();
 }
 
 /**
@@ -9039,27 +9084,17 @@ void ClearTilemaps() @safe {
 	}
 }
 
-//UNKNOWN_FDC0:
-//	JSR PpuSync
-//	LDA $E7
-//	AND #$BF
-//	STA $E7
-//	LDA #$00
-//	STA $E8
-//	STA $E9
-//	CLC
-//@UNKNOWN0:
-//	TAX
-//	LDA $0301,X
-//	AND #$BF
-//	STA $0301,X
-//	LDA #$00
-//	STA $0304,X
-//	STA $0305,X
-//	TXA
-//	ADC #$08
-//	BCC @UNKNOWN0
-//	RTS
+void Refresh_SpriteObjects() @safe {
+ 	PpuSync();
+	UNK_E7 &= 0xbf;
+	shift_x = 0;
+	shift_y = 0;
+	for(ushort x = 0; x >= 0x100; x += 8){
+		SPRITE_OBJECTS[x/8].oam_slot_flags &= 0xbf;
+		SPRITE_OBJECTS[x/8].velocity = Vector2B(0,0);
+		SPRITE_OBJECTS[x/8].shake = [];
+	}
+}
 
 //UNKNOWN_FDE7:
 //	LDA #$80
@@ -9074,26 +9109,9 @@ void WriteProtectPRGRam() @safe {
 	//nes.PRGRAMPROTECT = 0x80;
 }
 
-//TempUpperBankswitch:
-//	PHA
-//	LDA #$FE
-//	PHA
-//	LDA #$0C
-//	PHA
-//	TYA
-//	PHA
-//	TXA
-//	PHA
-//	TSX
-//	LDA $F7
-//	LDY $0105,X
-//	STA $0105,X
-//	TYA
-//	LDX #BANK::PRGA000
-//	JMP BANK_SWAP
-//	PLA
-//	LDX #BANK::PRGA000
-//	JMP BANK_SWAP
+void TempUpperBankswitch() @safe {
+	//we literally dont need to implement this :)
+}
 
 //IrqHandler:
 //	PHA
@@ -9263,9 +9281,9 @@ void Reset_Vector() @safe {
 	//nes.BANKSELECT = 0x00;
 
 	MemoryInit();
-	//MusicInit();
+	MusicInit();
 
-	bankSwap(0x13, MMC3Bank.prgA000);
+	BANK_SWAP(0x13, MMC3Bank.prgA000);
 	//0x10 isnt actual, ???
 	ram_PPUCTRL |= 0x80 | 0x10;
 	nes.PPUCTRL = ram_PPUCTRL;
@@ -9278,17 +9296,17 @@ void Reset_Vector() @safe {
  */
 void BankswitchMusic() @safe {
 	//version(original){
-	//	bankSwap(0x1C, MMC3Bank.prg8000); //$8000
+	//	BANK_SWAP(0x1C, MMC3Bank.prg8000); //$8000
 	//} else {
-		bankSwap(music_bank, MMC3Bank.prg8000); //$8000
+		BANK_SWAP(music_bank, MMC3Bank.prg8000); //$8000
 	//}
-	bankSwap(0x1D, MMC3Bank.prgA000); //$A000
+	BANK_SWAP(0x1D, MMC3Bank.prgA000); //$A000
 }
 
 /** Swaps PRG banks
  * Original_Address: $(DOLLAR) $FFD0, bank $1F
  */
-void bankSwap(ubyte bank, ubyte flags) @safe {
+void BANK_SWAP(ubyte bank, ubyte flags) @safe {
 	// This is more meaningful for an MMC3
 	bankswitch_mode = flags;
 	current_banks[flags] = bank;

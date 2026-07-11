@@ -4274,7 +4274,7 @@ void OverworldTransitionIntepreter() @safe {
 //	JSR UNKNOWN_EE0E
 //	LDA #$03
 //	STA $07F0
-//	JSR UNKNOWN_FDC0
+//	JSR Refresh_SpriteObjects
 //	LDX #$08
 //	LDY #$07
 //@UNKNOWN4:

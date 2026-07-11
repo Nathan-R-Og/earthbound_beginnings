@@ -2,19 +2,37 @@ module earthboundbeginnings.music;
 
 import earthboundbeginnings.external;
 import earthboundbeginnings.ram;
+import replatform64.nes.hardware.registers;
+import std.stdio;
+import std.range;
+
+ubyte[] a_stash = [];
+ubyte a_reg = 0;
+ubyte x_reg = 0;
+ubyte y_reg = 0;
+string current_instrument = "";
+
+
+
+//TODO: replatform64 is messed up???? needs work.
+//all of the registers seem to be in order...
+//more testing please!
+//skipping sfx stuff for now. get music working!!
+
 
 void Music_Tick() @safe {
-	B28_0277();
+	//return ActualMusicTick();
 }
 
-//UNKNOWN_1C8003:
-//	JMP B28_0299
+void B28_0003() @safe {
+    return B28_0299();
+}
 
 /**
  * Original_Address: $(DOLLAR) $8006, bank $1C
  */
 void Music_Init() @safe {
-	return B28_0216();
+	return ActualMusicInit();
 }
 
 //UNKNOWN_1C8009:
@@ -92,48 +110,49 @@ void Music_Init() @safe {
 //	.WORD UNKNOWN_1C8559
 //	.WORD UNKNOWN_1C8559
 
-//UNKNOWN_1C8095:
-//	LDA #$00
-//	BEQ UNKNOWN_1C80A3
-//UNKNOWN_1C8099:
-//	LDA #$08
-//	BNE UNKNOWN_1C80A3
-//UNKNOWN_1C809D:
-//	LDA #$0C
-//	BNE UNKNOWN_1C80A3
-//UNKNOWN_1C80A1:
-//	LDA #$04
-//UNKNOWN_1C80A3:
-//	STA $B0
-//	LDA #$40
-//	STA $B1
-//	STY $B2
-//	LDA #$81
-//	STA $B3
-//	LDY #$00
-//@UNKNOWN1:
-//	LDA ($B2),Y
-//	STA ($B0),Y
-//	INY
-//	TYA
-//	CMP #$04
-//	BNE @UNKNOWN1
-//	RTS
+void SetSQ1Registers() @safe {
+    a_reg = 0;
+    return B28_00a3();
+}
+void SetTRIRegisters() @safe {
+    a_reg = 8;
+    return B28_00a3();
+}
+void SetNOISERegisters() @safe {
+    a_reg = 12;
+    return B28_00a3();
+}
+void SetSQ2Registers() @safe {
+    a_reg = 4;
+    return B28_00a3();
+}
+//sfx related
+void B28_00a3() @safe {
+    unk_b0 = a_reg;
+    a_reg = 0x40;
+    unk_b1 = a_reg;
+    unk_b2 = y_reg;
+    a_reg = 0x81;
+    unk_b3 = a_reg;
+    y_reg = 0;
+    while (y_reg != 4){
+    //	LDA ($B2),Y
+    //	STA ($B0),Y
+        y_reg++;
+    }
+}
 
-//TickRNG:
-//	LDA $BB
-//	AND #$02
-//	STA UNKNOWN_07FF
-//	LDA $BC
-//	AND #$02
-//	EOR UNKNOWN_07FF
-//	CLC
-//	BEQ @UNKNOWN0
-//	SEC
-//@UNKNOWN0:
-//	ROR $BB
-//	ROR $BC
-//	RTS
+void TickRNG() @safe {
+    unk_7ff = unk_bb[0] & 2;
+    a_reg = unk_bb[1] & 2;
+    a_reg ^= unk_7ff;
+    unk_bb[1] >>= 1;
+    unk_bb[1] |= unk_bb[0] >> 7;
+    unk_bb[0] >>= 1;
+    if (a_reg != 0){
+        unk_bb[0] |= 0x80;
+    }
+}
 
 //UNKNOWN_1C80D3:
 //	LDX $BD
@@ -307,15 +326,15 @@ void Music_Init() @safe {
 //	STY $B0
 //	BNE UNKNOWN0_1C81DC
 
-void B28_0216() @safe {
+void ActualMusicInit() @safe {
     nes.SND_CHN = 0xf;
     unk_bb[0] = 0x55;
 
-    currptr_pulse1_blank = [];
-    currptr_triangle_blank = [];
+    currptr_pulse1_blank = [0,0];
+    currptr_triangle_blank = [0,0];
 
     //copy Ocarina_Missing_List to ntbl_xc
-    // ubyte temp_y = 0;
+    // ubyte y_reg = 0;
     // @copy:
     // lda Ocarina_Missing_List, y
     // sta ntbl_xc, y
@@ -341,7 +360,7 @@ void B28_0216() @safe {
 void B28_0248() @safe{
 	//ocarina handler probably
     // unk_b0 = learned_melodies;
-	// ubyte temp_y = 0;
+	// ubyte y_reg = 0;
     // goto B28_025d
     // @B28_0251:
     // lda #<mus_ocarina_missing
@@ -394,11 +413,12 @@ void B28_0248() @safe{
 //@UNKNOWN2:
 //	RTS
 
-void B28_0277() @safe {
+void ActualMusicTick() @safe {
+    a_reg = 0xc0;
 	//APU "frame counter". Select "one 5-step sequence" (whatever that means) and clear interrupt flag
-    nes.JOY2 = 0xc0;
+    nes.JOY2 = a_reg;
 
-    //TickRNG();
+    TickRNG();
     //HandleNoiseSFX();
     //HandlePulseGroup1SFX();
     //HandleTriangleSFX();
@@ -411,26 +431,28 @@ void B28_0277() @safe {
 	soundqueue_triangle = 0;
 	soundqueue_pulseg1 = 0;
 	soundqueue_track = 0;
+    a_reg = 0;
+    x_reg = 0;
 }
 
 void B28_0299() @safe {
     B28_02a8();
-	return B28_029c();
+	return VolEnvInit();
 }
 //fallthrough
-void B28_029c() @safe {
-    B28_02c6();
+void VolEnvInit() @safe {
+    VolInit();
     nes.DMC_RAW = 0;
     ME_Envelopes0[2] = 0;
 }
 
 void B28_02a8() @safe {
-    unk_7c8 = 0;
-    unk_7c9 = 0;
-    unk_7ca = 0;
+    unk_7c7[1] = 0;
+    unk_7c7[2] = 0;
+    unk_7c7[3] = 0;
 
     current_music = 0;
-    currptr_triangle_blank = [];
+    currptr_triangle_blank = [0,0];
     // Set all sounds and music to be inactive
 
 	soundqueue_noise = 0;
@@ -441,7 +463,7 @@ void B28_02a8() @safe {
 	soundqueue_track = 0;
 }
 
-void B28_02c6() @safe {
+void VolInit() @safe {
     nes.DMC_RAW = 0;
     nes.SQ1_VOL = 0x10;
     nes.SQ2_VOL = 0x10;
@@ -467,16 +489,16 @@ void B28_02c6() @safe {
 //	RTS
 
 //UNKNOWN_1C82F8:
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	BEQ UNKNOWN_1C830A
 //UNKNOWN_1C82FD:
-//	JSR UNKNOWN_1C80A1
+//	JSR SetSQ2Registers
 //	BEQ UNKNOWN_1C830A
 //UNKNOWN_1C8304:
-//	JSR UNKNOWN_1C8099
+//	JSR SetTRIRegisters
 //	BEQ UNKNOWN_1C830A
 //UNKNOWN_1C8309:
-//	JSR UNKNOWN_1C809D
+//	JSR SetNOISERegisters
 //UNKNOWN_1C830A:
 //	LDA $BF
 //	STA UNKNOWN_07F8,X
@@ -502,7 +524,7 @@ void B28_02c6() @safe {
 //	  JSR UNKNOWN_1C80D3
 //	  BNE UNKNOWN_1C8320
 //	  LDY #$14
-//	  JSR UNKNOWN_1C809D
+//	  JSR SetNOISERegisters
 //	  INC UNKNOWN_07DF
 //	  LDA UNKNOWN_07DF
 //	  CMP #$04
@@ -724,7 +746,7 @@ void B28_02c6() @safe {
 
 //UNKNOWN_1C84BC:
 //	STA UNKNOWN_07D5+4
-//	JSR UNKNOWN_1C80A1
+//	JSR SetSQ2Registers
 //	LDA $BF
 //	STA UNKNOWN_07F8+4
 //	LDX #$01
@@ -752,7 +774,7 @@ void B28_02c6() @safe {
 
 //UNKNOWN_1C84F6:
 //	LDY #$24
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	LDA #$0A
 //	LDY #$20
 //	JSR UNKNOWN_1C84BC
@@ -794,13 +816,13 @@ void B28_02c6() @safe {
 
 //UNKNOWN_1C8542:
 //	LDY #$30
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	LDA #$08
 //	LDY #$34
 //	BNE UNKNOWN_1C8556
 //UNKNOWN_1C854D:
 //	LDY #$2C
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	LDA #$03
 //	LDY #$28
 //UNKNOWN_1C8556:
@@ -871,7 +893,7 @@ void B28_02c6() @safe {
 //	BNE UNKNOWN_1C859B
 //	INC UNKNOWN_07E3+1
 //	LDY #$7C
-//	JMP UNKNOWN_1C8095
+//	JMP SetSQ1Registers
 //UNKNOWN_1C85DF:
 //	LDA #$02
 //	LDY #.LOBYTE(UNKNOWN_1C8190)
@@ -895,7 +917,7 @@ void B28_02c6() @safe {
 //	JMP UNKNOWN_1C8688
 //@UNKNOWN2:
 //	LDY #$68
-//	JMP UNKNOWN_1C8095
+//	JMP SetSQ1Registers
 
 //UNKNOWN_1C860D:
 //	INC $078B
@@ -929,7 +951,7 @@ void B28_02c6() @safe {
 //	LDY #$44
 //@UNKNOWN3:
 //	PHA
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	PLA
 //	BNE UNKNOWN_1C861A
 //@UNKNOWN4:
@@ -998,10 +1020,10 @@ void B28_02c6() @safe {
 //	JMP UNKNOWN_1C8688
 //@UNKNOWN1:
 //	LDY #$84
-//	JMP UNKNOWN_1C8095
+//	JMP SetSQ1Registers
 //@UNKNOWN2:
 //	LDY #$88
-//	JMP UNKNOWN_1C8095
+//	JMP SetSQ1Registers
 //UNKNOWN_1C86C4:
 //	LDA #$08
 //	LDY #.LOBYTE(UNKNOWN_1C816C)
@@ -1038,7 +1060,7 @@ void B28_02c6() @safe {
 //@UNKNOWN6:
 //	LDY #$74
 //@UNKNOWN7:
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	INC UNKNOWN_07DF+1
 //UNKNOWN_1C870E:
 //	RTS
@@ -1053,7 +1075,7 @@ void B28_02c6() @safe {
 //	JMP UNKNOWN_1C8688
 //UNKNOWN_1C8721:
 //	LDY #$50
-//	JMP UNKNOWN_1C8095
+//	JMP SetSQ1Registers
 //UNKNOWN_1C8726:
 //	LDA UNKNOWN_07F8+1
 //	CMP #$07
@@ -1110,7 +1132,7 @@ void B28_02c6() @safe {
 //	BNE UNKNOWN_1C877E
 //	LDY #$60
 //UNKNOWN_1C8786:
-//	JSR UNKNOWN_1C8095
+//	JSR SetSQ1Registers
 //	CLC
 //	LDA UNKNOWN_07E3+1
 //	ADC UNKNOWN_07DF+1
@@ -1285,68 +1307,72 @@ void B28_02c6() @safe {
 //	JMP UNKNOWN_1C88A3
 //@UNKNOWN0:
 //	LDY #$AC
-//	JMP UNKNOWN_1C8099
+//	JMP SetTRIRegisters
 
-void B28_0903() @safe {
+void MusMelody() @safe {
     B28_0248();
     current_music = 1;
-    B28_0946(1);
+    a_reg = 1;
+    SetMusic_ID();
 }
 
-void B28_090e() @safe {
+void MusInvalid() @safe {
     return B28_0299();
 }
 
 void HandleMusic() @safe {
-	ubyte temp_a = soundqueue_track;
-	ubyte temp_y = temp_a;
-	if (temp_a >= 0x3f){
-		return B28_090e();
+	a_reg = soundqueue_track;
+	y_reg = a_reg;
+	if (a_reg >= 0x3f){
+		return MusInvalid();
 	}
-	if (temp_a == 1){
-		return B28_0903();
+	if (a_reg == 1){
+		return MusMelody();
 	}
-	temp_a = temp_y;
-	if (temp_a == 0){
-		return B28_095c();
+	a_reg = y_reg;
+	if (a_reg == 0){
+		return MusZero();
 	}
-	current_music = temp_a;
-	if ((temp_a < 0x19) || (temp_a  == 0x19)){
-		unk_bf = temp_a;
-		temp_a -= 0x19;
-		music_id = temp_a;
-		return B28_094e();
+	current_music = a_reg;
+	if (a_reg >= 0x19){
+		unk_bf = a_reg;
+		a_reg -= 0x19;
+		music_id = a_reg;
+		return SetMusic_ID_post();
 	}
     //if playing pollyanna, check if need to play bein friends instead
-	if (temp_a != 6){
-		return B28_0946(temp_a);
+	if (a_reg != 6){
+		return SetMusic_ID();
 	}
     //if party count != 1, play bein friends
     if (pc_count == 1){
-		return B28_0946(7);
+        a_reg = 7;
+		return SetMusic_ID();
 	}
-	return B28_0946(temp_y);
+    a_reg = y_reg;
+	return SetMusic_ID();
 }
 
-void B28_0946(ubyte a) @safe {
-    unk_bf = a;
-    music_id = a;
+void SetMusic_ID() @safe {
+    unk_bf = a_reg;
+    music_id = a_reg;
     music_id--;
-	return B28_094e();
+	return SetMusic_ID_post();
 }
 
-void B28_094e() @safe {
-    UNK_7C0[0] = 0x7f;
-    UNK_7C0[1] = 0x7f;
-    B28_0aec();
+void SetMusic_ID_post() @safe {
+    a_reg = 0x7f;
+    UNK_7C0[0] = a_reg;
+    UNK_7C0[1] = a_reg;
+    LoadMusicHeader();
 	return B28_0959();
 }
 
 void B28_0959() @safe {
-	//return B28_0c7b();
+	return B28_0c7b();
 }
 
-void B28_095c() @safe {
+void MusZero() @safe {
 	if (soundactive_track != 0){
 		return B28_0959();
 	}
@@ -1389,146 +1415,193 @@ void B28_095c() @safe {
 //UNKNOWN_1C89A1:
 //	.BYTE $1F, $19, $14, $12, $11, $00
 
-//UNKNOWN_1C89A7:
-//	.BYTE $00, $10, $01
-//	.BYTE $18, $00, $01
-//	.BYTE $38, $00, $03
-//	.BYTE $40, $00, $06
-//	.BYTE $58, $01, $03
-//	.BYTE $40, $02, $04
-//	.BYTE $40, $13, $05
-//	.BYTE $40, $14, $0A
-//	.BYTE $40, $14, $08
-//	.BYTE $40, $12, $0E
-//	.BYTE $08, $16, $0E
-//	.BYTE $28, $16, $0B
+ubyte[] Noise_Instruments = [
+0x00,0x10,0x01,
+0x18,0x00,0x01,
+0x38,0x00,0x03,
+0x40,0x00,0x06,
+0x58,0x01,0x03,
+0x40,0x02,0x04,
+0x40,0x13,0x05,
+0x40,0x14,0x0A,
+0x40,0x14,0x08,
+0x40,0x12,0x0E,
+0x08,0x16,0x0E,
+0x28,0x16,0x0B,
+0x18,
+];
 
-//	.BYTE $18
-//UNKNOWN_1C89CC:
-//	LDA UNKNOWN_07F8+5
-//	CMP #$01
-//	BEQ @UNKNOWN1
-//	TXA
-//	CMP #$03
-//	BEQ @UNKNOWN1
-//	LDA UNKNOWN_079A,X
-//	AND #$E0
-//	BEQ @UNKNOWN1
-//	STA $B0
-//	LDA UNKNOWN_07C3,X
-//	CMP #$02
-//	BEQ @UNKNOWN0
-//	LDY $BE
-//	LDA $0780,Y
-//	STA $B1
-//	JSR UNKNOWN_1C8A33
-//@UNKNOWN0:
-//	INC UNKNOWN_07D1,X
-//@UNKNOWN1:
-//	RTS
+void B28_09cc() @safe {
+    a_reg = soundactive_track;
+    if (a_reg == 1){
+        return;
+    }
+    a_reg = x_reg;
+    if (a_reg == 3){
+        return;
+    }
+    a_reg = ME_Envelopes0[x_reg];
+    a_reg &= 0xe0;
+    if (a_reg == 0){
+        return;
+    }
+    unk_b0 = a_reg;
+    a_reg = unk_7c3[x_reg];
+    if (a_reg == 2){
+        unk_7d1[x_reg]++;
+        return;
+    }
+    y_reg = unk_be;
+    switch (y_reg/2){
+        case 0:
+            a_reg = currptr_pulse0[y_reg%2];
+            break;
+        case 1:
+            a_reg = currptr_pulse0_blank[y_reg%2];
+            break;
+        case 2:
+            a_reg = currptr_pulse1[y_reg%2];
+            break;
+        case 3:
+            a_reg = currptr_pulse1_blank[y_reg%2];
+            break;
+        case 4:
+            a_reg = currptr_triangle[y_reg%2];
+            break;
+        case 5:
+            a_reg = currptr_triangle_blank[y_reg%2];
+            break;
+        default:
+            break;
+    }
+    unk_b1 = a_reg;
+    B28_0a33();
+    unk_7d1[x_reg]++;
+}
 
-//UNKNOWN_1C89F6:
-//	LDA $B2
-//	CMP #$31
-//	BNE UNKNOWN_1C89FE
-//	LDA #$27
-//UNKNOWN_1C89FE:
-//	TAY
-//	LDA UNKNOWN_1C8A85,Y
-//	PHA
-//	LDA UNKNOWN_07C3,X
-//	CMP #$46
-//	BNE UNKNOWN_1C8A0F
-//	PLA
-//	LDA #$00
-//	BEQ UNKNOWN_1C8A6D
-//UNKNOWN_1C8A0F:
-//	PLA
-//	JMP UNKNOWN_1C8A6D
-//UNKNOWN_1C8A13:
-//	LDA $B2
-//	TAY
-//	CMP #$10
-//	BCS UNKNOWN_1C8A20
-//	LDA UNKNOWN_1C8ABC,Y
-//	JMP UNKNOWN_1C8A73
-//UNKNOWN_1C8A20:
-//	LDA #$F6
-//	BNE UNKNOWN_1C8A73
-//UNKNOWN_1C8A24:
-//	LDA UNKNOWN_07C3,X
-//	CMP #$4C
-//	BCC UNKNOWN_1C8A2F
-//	LDA #$FE
-//	BNE UNKNOWN_1C8A73
-//UNKNOWN_1C8A2F:
-//	LDA #$FE
-//	BNE UNKNOWN_1C8A73
-//UNKNOWN_1C8A33:
-//	LDA UNKNOWN_07D1,X
-//	STA $B2
-//	LDA $B0
-//	CMP #$20
-//	BEQ UNKNOWN_1C8A52
-//	CMP #$A0
-//	BEQ UNKNOWN_1C8A61
-//	CMP #$60
-//	BEQ UNKNOWN_1C8A24
-//	CMP #$40
-//	BEQ UNKNOWN_1C8A13
-//	CMP #$80
-//	BEQ UNKNOWN_1C89F6
-//	CMP #$C0
-//	BEQ UNKNOWN_1C89F6
-//UNKNOWN_1C8A52:
-//	LDA $B2
-//	CMP #$0A
-//	BNE UNKNOWN_1C8A5A
-//	LDA #$00
-//UNKNOWN_1C8A5A:
-//	TAY
-//	LDA UNKNOWN_1C8AB2,Y
-//	JMP UNKNOWN_1C8A6D
-//UNKNOWN_1C8A61:
-//	LDA $B2
-//	CMP #$2B
-//	BNE UNKNOWN_1C8A69
-//	LDA #$21
-//UNKNOWN_1C8A69:
-//	TAY
-//	LDA UNKNOWN_1C8A91,Y
-//UNKNOWN_1C8A6D:
-//	PHA
-//	TYA
-//	STA UNKNOWN_07D1,X
-//	PLA
-//UNKNOWN_1C8A73:
-//	PHA
-//	LDA UNKNOWN_07C7+1,X
-//	BNE UNKNOWN_1C8A83
-//	PLA
-//	CLC
-//	ADC $B1
-//	LDY $BE
-//	STA SQ1_LO,Y
-//	RTS
-//UNKNOWN_1C8A83:
-//	PLA
-//	RTS
+void UNKNOWN_1C89F6() @safe {
+    a_reg = unk_b2;
+    if (a_reg == 0x31){
+        a_reg = 0x27;
+    }
+    y_reg = a_reg;
+    a_reg = cast(ubyte) Pitch_Envelope_4_6[y_reg];
+    a_stash ~= a_reg;
+    a_reg = unk_7c3[x_reg];
+    if (a_reg == 0x46){
+        a_reg = a_stash.front;
+	    a_stash.popFront();
+        a_reg = 0;
+    } else {
+        a_reg = a_stash.front;
+	    a_stash.popFront();
+    }
+    return UNKNOWN_1C8A6D();
+}
 
-//UNKNOWN_1C8A85:
-//	.BYTE $09, $08, $07, $06, $05, $04, $03, $02, $02, $01, $01, $00
-//UNKNOWN_1C8A91:
-//	.BYTE $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $01, $01, $00, $00, $00, $FF, $FF, $00
-//UNKNOWN_1C8AB2:
-//	.BYTE $00, $01, $01, $02, $01, $00, $FF, $FF, $FE, $FF
-//UNKNOWN_1C8ABC:
-//	.BYTE $00, $FF, $FE, $FD, $FC, $FB, $FA, $F9, $F8, $F7, $F6, $F5, $F6, $F7, $F6, $F5
+void UNKNOWN_1C8A13() @safe {
+    a_reg = unk_b2;
+    y_reg = a_reg;
+    if (a_reg < 0x10){
+        a_reg = Pitch_Envelope_2[y_reg];
+    } else {
+        a_reg = 0xF6;
+    }
+    return UNKNOWN_1C8A73();
+}
 
-//UNKNOWN_1C8ACC:
-//	LDA UNKNOWN_07CC
-//	TAY
-//	LDA UNKNOWN_1C90F4,Y
+void UNKNOWN_1C8A24() @safe {
+    a_reg = unk_7c3[x_reg];
+    if (a_reg >= 0x4c){
+        a_reg = 0xfe;
+    } else {
+        a_reg = 0xfe;
+    }
+    return UNKNOWN_1C8A73();
+}
+
+void B28_0a33() @safe {
+    a_reg = unk_7d1[x_reg];
+    unk_b2 = a_reg;
+    a_reg = unk_b0;
+    if (a_reg == 0x20){
+        a_reg = unk_b2;
+        if (a_reg == 0xa){
+            a_reg = 0;
+        }
+        y_reg = a_reg;
+        a_reg = cast(ubyte) Pitch_Envelope_1_7[y_reg];
+        return UNKNOWN_1C8A6D();
+    }
+    if (a_reg == 0xA0){
+        a_reg = unk_b2;
+        if (a_reg >= 0x2b){
+            a_reg = 0x21;
+        }
+        y_reg = a_reg;
+        //debug
+        if (y_reg < Pitch_Envelope_5.length){
+            a_reg = cast(ubyte) Pitch_Envelope_5[y_reg];
+        } else {
+            a_reg = cast(ubyte) Pitch_Envelope_1_7[y_reg - Pitch_Envelope_5.length];
+        }
+        return;
+    }
+    if (a_reg == 0x60){
+        return UNKNOWN_1C8A24();
+    }
+    if (a_reg == 0x40){
+        return UNKNOWN_1C8A13();
+    }
+    if (a_reg == 0x80){
+        return UNKNOWN_1C89F6();
+    }
+    if (a_reg == 0xc0){
+        return UNKNOWN_1C89F6();
+    }
+}
+
+void UNKNOWN_1C8A6D() @safe {
+    a_stash ~= a_reg;
+    a_reg = y_reg;
+    unk_7d1[x_reg] = a_reg;
+    a_reg = a_stash.front;
+    a_stash.popFront();
+    return UNKNOWN_1C8A73();
+}
+
+void UNKNOWN_1C8A73() @safe {
+    a_stash ~= a_reg;
+    a_reg = unk_7c7[x_reg+1];
+    if (a_reg == 0){
+        a_reg += unk_b1;
+        y_reg = unk_be;
+        nes.writeRegisterPlatform(Register.SQ1_LO + y_reg, a_reg);
+    } else {
+        a_reg = a_stash.front;
+	    a_stash.popFront();
+    }
+}
+
+byte[] Pitch_Envelope_4_6 = [
+9,8,7,6,5,4,3,2,2,1,1,0
+];
+byte[] Pitch_Envelope_5 = [
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+0,0,0,0,-1,0,0,0,0,1,1,0,0,0,-1,-1,
+0
+];
+byte[] Pitch_Envelope_1_7 = [
+0,1,1,2,1,0,-1,-1,-2,-1
+];
+byte[] Pitch_Envelope_2 = [
+0,-1,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-10,-9,-10,-11 // -10 hardcoded
+];
+
+void B28_0acc() @safe {
+    a_reg = music_id;
+    y_reg = a_reg;
+    //a_reg = Music_Table_2_Ids[Y]
 //	TAY
 //	LDX #$00
 //@UNKNOWN0:
@@ -1539,232 +1612,226 @@ void B28_095c() @safe {
 //	TXA
 //	CMP #$0A
 //	BNE @UNKNOWN0
-//	RTS
+}
 
 //UNKNOWN_1C8AE4:
 //	LDA #$FF
 //	STA UNKNOWN_07A0,X
 //	JMP UNKNOWN_1C8B65
 
-void B28_0aec() @safe {
-	B28_029c();
-	ubyte temp_a = unk_bf;
-	ubyte temp_x = 0;
-	ubyte temp_y = 0;
-    soundactive_track = temp_a;
-	if (temp_a == 0x32){
-		while(temp_x != 10){
+//B28_0aec
+void LoadMusicHeader() @safe {
+	VolEnvInit();
+	a_reg = unk_bf;
+    soundactive_track = a_reg;
+	if (a_reg == 0x32){
+		while(x_reg != 10){
 			//lda Path_To_Giegue_BGM_header, y
-			//sta ME_Transpose, x
-			temp_y++;
-			temp_x++;
-			temp_a = temp_x;
+			//sta MusicHeader, x
+			y_reg++;
+			x_reg++;
+			a_reg = x_reg;
 		}
-	} else if (temp_a >= 0x19){
-		//jsr B28_0acc
+	} else if (a_reg >= 0x19){
+		B28_0acc();
 	} else {
-		temp_a = music_id;
-		temp_y = temp_a;
-		// lda Music_Table_Ids, y
-		temp_y = temp_a;
-		temp_x = 0;
-		while(temp_x != 10){
-			// lda Music_Table, y
-			// sta ME_Transpose, x
-			temp_y++;
-			temp_x++;
-			temp_a = temp_x;
-		}
+        MusicHeader = *Music_Table_Ids[music_id];
 	}
-    // lda #1
-    // sta MusicChannel_NoteLengthCounter
-    // sta MusicChannel_NoteLengthCounter+1
-    // sta MusicChannel_NoteLengthCounter+2
-    // sta MusicChannel_NoteLengthCounter+3
-    // lda #0
-    // sta unk_ba
-    // ldy #8
-    // B28_0b45:
-    // sta ME_CurrentNoisePhrase+1, y
-    // dey
-    // bne B28_0b45
-    // tax
-    // B28_0b4c:
-    // //store datapointer lo
-    // lda ME_DataPointer, x
-    // sta unk_b6
+    MusicChannel_NoteLengthCounter = [1,1,1,1];
+    unk_ba = 0;
 
-    // //check datapointer hi if ff, else store
-    // lda ME_DataPointer+1, x
-    // cmp #$ff
-    // beq B28_0ae4
-    // //store
-    // sta unk_b6+1
+    ME_CurrentPulse1Phrase = null;
+    ME_CurrentPulse2Phrase = null;
+    ME_CurrentTrianglePhrase = null;
+    ME_CurrentNoisePhrase = null;
 
-    // ldy ME_CurrentPhraseIndex
+    x_reg = 0;
+    while(x_reg != 8){
+        switch(x_reg){
+            case 0:
+                unk_b6_pointer = MusicHeader.pulse1;
+                break;
+            case 2:
+                unk_b6_pointer = MusicHeader.pulse2;
+                break;
+            case 4:
+                unk_b6_pointer = MusicHeader.triangle;
+                break;
+            case 6:
+                unk_b6_pointer = MusicHeader.noise;
+                break;
+            default:
+                break;
+        }
+        if ((*unk_b6_pointer)[GetInstrumentTrack(x_reg/2)].f == -1){
+            a_reg = 0xff;
+            switch(x_reg){
+                case 0:
+                    ME_CurrentPulse1Phrase = null;
+                    break;
+                case 2:
+                    ME_CurrentPulse2Phrase = null;
+                    break;
+                case 4:
+                    ME_CurrentTrianglePhrase = null;
+                    break;
+                case 6:
+                    ME_CurrentNoisePhrase = null;
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            switch(x_reg){
+                case 0:
+                    y_reg = ME_Pulse1Index;
+                    ME_CurrentPulse1Phrase = unk_b6_pointer;
+                    break;
+                case 2:
+                    y_reg = ME_Pulse2Index;
+                    ME_CurrentPulse2Phrase = unk_b6_pointer;
+                    break;
+                case 4:
+                    y_reg = ME_TriangleIndex;
+                    ME_CurrentTrianglePhrase = unk_b6_pointer;
+                    break;
+                case 6:
+                    y_reg = ME_NoiseIndex;
+                    ME_CurrentNoisePhrase = unk_b6_pointer;
+                    break;
+                default:
+                    break;
+            }
+        }
+        y_reg++;
 
-    // //get phrase pointers from pointer
-    // lda (unk_b6), y
-    // sta ME_CurrentPhrases, x
-    // iny
-    // lda (unk_b6), y
-    // B28_0b65:
-    // sta ME_CurrentPhrases+1, x
-
-    // inx
-    // inx
-    // txa
-    // cmp #8
-    // bne B28_0b4c
-//UNKNOWN_1C8B0A:
-//	LDA UNKNOWN_1C92F8,Y
-//	STA $0790,X
-//	INY
-//	INX
-//	TXA
-//	CMP #$0A
-//	BNE UNKNOWN_1C8B0A
-//	JMP UNKNOWN_1C8B31
-//UNKNOWN_1C8B1A:
-//	LDA UNKNOWN_07CC
-//	TAY
-//	LDA UNKNOWN_1C90DC,Y
-//	TAY
-//	LDX #$00
-//UNKNOWN_1C8B24:
-//	LDA UNKNOWN_1C910E,Y
-//	STA $0790,X
-//	INY
-//	INX
-//	TXA
-//	CMP #$0A
-//	BNE UNKNOWN_1C8B24
-//UNKNOWN_1C8B31:
-//	LDA #$01
-//	STA UNKNOWN_07B4
-//	STA UNKNOWN_07B4+1
-//	STA UNKNOWN_07B4+2
-//	STA UNKNOWN_07B4+3
-//	LDA #$00
-//	STA $BA
-//	LDY #$08
-//UNKNOWN_1C8B45:
-//	STA UNKNOWN_07A0+7,Y
-//	DEY
-//	BNE UNKNOWN_1C8B45
-//	TAX
-//UNKNOWN_1C8B4C:
-//	LDA UNKNOWN_0792,X
-//	STA $B6
-//	LDA UNKNOWN_0792+1,X
-//	CMP #$FF
-//	BEQ UNKNOWN_1C8AE4
-//	STA $B7
-//	LDY UNKNOWN_07A8
-//	LDA ($B6),Y
-//	STA UNKNOWN_07A0,X
-//	INY
-//	LDA ($B6),Y
-//UNKNOWN_1C8B65:
-//	STA UNKNOWN_07A0+1,X
-//	INX
-//	INX
-//	TXA
-//	CMP #$08
-//	BNE UNKNOWN_1C8B4C
+        x_reg++;
+        x_reg++;
+    }
 }
 
-//UNKNOWN_1C8B70:
-//	LDA $078A
-//	BEQ UNKNOWN_1C8BA0
-//	CMP #$01
-//	BEQ @UNKNOWN0
-//	LDA #$7F
-//	STA SQ2_SWEEP
-//	LDA $0784
-//	STA SQ2_LO
-//	LDA $0785
-//	STA SQ2_HI
-//@UNKNOWN0:
-//	LDA #$7F
-//	STA SQ1_SWEEP
-//	LDA $0780
-//	STA SQ1_LO
-//	LDA $0781
-//	STA SQ1_HI
-//	LDA #$00
-//	STA $078A
-//UNKNOWN_1C8BA0:
-//	RTS
+void B28_0b70() @safe {
+    a_reg = currptr_triangle_blank[0];
+    if (a_reg == 0){
+        return;
+    }
+    if (a_reg != 1){
+        a_reg = 0x7f;
+        nes.SQ2_SWEEP = a_reg;
+        a_reg = currptr_pulse1[0];
+        nes.SQ2_LO = a_reg;
+        a_reg = currptr_pulse1[1];
+        nes.SQ2_HI = a_reg;
+    } else {
+        a_reg = 0x7f;
+        nes.SQ1_SWEEP = a_reg;
+        a_reg = currptr_pulse0[0];
+        nes.SQ1_LO = a_reg;
+        a_reg = currptr_pulse0[1];
+        nes.SQ1_HI = a_reg;
+        a_reg = 0;
+        currptr_triangle_blank[0] = a_reg;
+    }
+}
 
-//UNKNOWN_1C8BA1:
-//	TXA
-//	CMP #$02
-//	BCS UNKNOWN_1C8BA0
-//	LDA UNKNOWN_079A,X
-//	AND #$1F
-//	BEQ @UNKNOWN6
-//	STA $B1
-//	LDA UNKNOWN_07C3,X
-//	CMP #$02
-//	BEQ @UNKNOWN9
-//	LDY #$00
-//@UNKNOWN1:
-//	DEC $B1
-//	BEQ @UNKNOWN2
-//	INY
-//	INY
-//	BNE @UNKNOWN1
-//@UNKNOWN2:
-//	LDA UNKNOWN_1C8E85,Y
-//	STA $B2
-//	LDA UNKNOWN_1C8E85 + 1,Y
-//	STA $B3
-//	LDA UNKNOWN_07CD,X
-//	LSR
-//	TAY
-//	LDA ($B2),Y
-//	STA $B4
-//	CMP #$FF
-//	BEQ @UNKNOWN7
-//	CMP #$F0
-//	BEQ @UNKNOWN8
-//	LDA UNKNOWN_07CD,X
-//	AND #$01
-//	BNE @UNKNOWN3
-//	LSR $B4
-//	LSR $B4
-//	LSR $B4
-//	LSR $B4
-//@UNKNOWN3:
-//	LDA $B4
-//	AND #$0F
-//	STA $B0
-//	LDA UNKNOWN_079D,X
-//	AND #$F0
-//	ORA $B0
-//	TAY
-//@UNKNOWN4:
-//	INC UNKNOWN_07CD,X
-//@UNKNOWN5:
-//	LDA UNKNOWN_07C7+1,X
-//	BNE @UNKNOWN6
-//	TYA
-//	LDY $BE
-//	STA SQ1,Y
-//@UNKNOWN6:
-//	RTS
-//@UNKNOWN7:
-//	LDY UNKNOWN_079D,X
-//	BNE @UNKNOWN5
-//@UNKNOWN8:
-//	LDY #$10
-//	BNE @UNKNOWN5
-//@UNKNOWN9:
-//	LDY #$10
-//	BNE @UNKNOWN4
-//UNKNOWN_1C8C14:
-//	INY
+void B28_0ba1() @safe {
+    a_reg = x_reg;
+    if (a_reg >= 2){
+        return;
+    }
+    a_reg = ME_Envelopes0[x_reg];
+    a_reg &= 0x1f;
+    if (a_reg == 0){
+        goto UNKNOWN6;
+    }
+    unk_b1 = a_reg;
+    a_reg = unk_7c3[x_reg];
+    if (a_reg == 2){
+        goto UNKNOWN9;
+    }
+    y_reg = 0;
+    UNKNOWN1:
+    unk_b1--;
+    if (unk_b1 == 0){
+        goto UNKNOWN2;
+    }
+    y_reg++;
+    y_reg++;
+    if (y_reg != 0){
+        goto UNKNOWN1;
+    }
+    UNKNOWN2:
+    unk_b2_pointer = Volume_Envelope_Table[y_reg/2];
+
+    a_reg = unk_7cd[x_reg];
+    a_reg >>= 1;
+    y_reg = a_reg;
+    unk_b4 = (*unk_b2_pointer)[y_reg/2];
+    if (a_reg == 0xff){
+        goto UNKNOWN7;
+    }
+    if (a_reg == 0xf0){
+        goto UNKNOWN8;
+    }
+    a_reg = unk_7cd[x_reg];
+    a_reg &= 1;
+    if (a_reg != 0){
+        goto UNKNOWN3;
+    }
+    unk_b4 >>= 4;
+    UNKNOWN3:
+    unk_b0 = unk_b4 & 0xf;
+    a_reg = (ME_Envelopes1[x_reg] & 0xf0) | unk_b0;
+    y_reg = a_reg;
+    UNKNOWN4:
+    unk_7cd[x_reg]++;
+    UNKNOWN5:
+    a_reg = unk_7c7[x_reg+1];
+    if (a_reg != 0){
+        goto UNKNOWN6;
+    }
+    a_reg = y_reg;
+    y_reg = unk_be;
+    switch(y_reg){
+        case 0:
+            nes.SQ1_VOL = a_reg;
+            break;
+        case 4:
+            nes.SQ2_VOL = a_reg;
+            break;
+        case 8:
+            nes.TRI_LINEAR = a_reg;
+            break;
+        case 12:
+            nes.NOISE_VOL = a_reg;
+            break;
+        default:
+            break;
+    }
+    UNKNOWN6:
+    return;
+    UNKNOWN7:
+    y_reg = ME_Envelopes1[x_reg];
+    if (y_reg != 0){
+        goto UNKNOWN5;
+    }
+    UNKNOWN8:
+    y_reg = 0x10;
+    goto UNKNOWN5;
+    UNKNOWN9:
+    y_reg = 0x10;
+    goto UNKNOWN4;
+}
+
+//ran when a loop point is found in a list of phrases
+void DoLoop() @safe {
+    //get 'loop point' address
+    //must be directly after -1
+    y_reg++;
+    y_reg++;
+
+    //????
+    //y_reg = (*unk_b6_pointer)[y_reg/2].f;
 //	LDA ($B6),Y
 //	STA UNKNOWN_0792,X
 //	INY
@@ -1774,554 +1841,800 @@ void B28_0aec() @safe {
 //	STA $B6
 //	LDA UNKNOWN_0792+1,X
 //	STA $B7
-//	TXA
-//	LSR
-//	TAX
-//	LDA #$00
-//	TAY
-//	STA UNKNOWN_07A8,X
-//	JMP UNKNOWN_1C8C53
-//UNKNOWN_1C8C36:
-//	JSR B28_0299
-//UNKNOWN_1C8C39:
-//	RTS
 
-//UNKNOWN_1C8C3A:
-//	TXA
-//	ASL
-//	TAX
-//	LDA UNKNOWN_0792,X
-//	STA $B6
-//	LDA UNKNOWN_0792+1,X
-//	STA $B7
-//	TXA
-//	LSR
-//	TAX
-//	INC UNKNOWN_07A8,X
-//	INC UNKNOWN_07A8,X
-//	LDY UNKNOWN_07A8,X
-//UNKNOWN_1C8C53:
-//	TXA
-//	ASL
-//	TAX
-//	LDA ($B6),Y
-//	STA UNKNOWN_07A0,X
-//	INY
-//	LDA ($B6),Y
-//	STA UNKNOWN_07A0+1,X
-//	CMP #$00
-//	BEQ UNKNOWN_1C8C36
-//	CMP #$FF
-//	BEQ UNKNOWN_1C8C14
-//	TXA
-//	LSR
-//	TAX
-//	LDA #$00
-//	STA UNKNOWN_07AC,X
-//	LDA #$01
-//	STA UNKNOWN_07B4,X
-//	BNE UNKNOWN_1C8C95
-//UNKNOWN_1C8C78:
-//	JMP UNKNOWN_1C8C3A
-//UNKNOWN_1C8C7B:
-//	JSR UNKNOWN_1C8B70
-//	LDA #$00
-//	TAX
-//	STA $BE
-//	BEQ UNKNOWN_1C8C95
-//UNKNOWN_1C8C85:
-//	TXA
-//	LSR
-//	TAX
-//UNKNOWN_1C8C88:
-//	INX
-//	TXA
-//	CMP #$04
-//	BEQ UNKNOWN_1C8C39
-//	LDA $BE
-//	CLC
-//	ADC #$04
-//	STA $BE
-//UNKNOWN_1C8C95:
-//	TXA
-//	ASL
-//	TAX
-//	LDA UNKNOWN_07A0,X
-//	STA $B6
-//	LDA UNKNOWN_07A0+1,X
-//	STA $B7
-//	LDA UNKNOWN_07A0+1,X
-//	CMP #$FF
-//	BEQ UNKNOWN_1C8C85
-//	TXA
-//	LSR
-//	TAX
-//	DEC UNKNOWN_07B4,X
-//	BNE UNKNOWN_1C8CFA
-//	LDA #$00
-//	STA UNKNOWN_07CD,X
-//	STA UNKNOWN_07D1,X
-//UNKNOWN_1C8CB9:
-//	JSR UNKNOWN_1C8E7C
-//	BEQ UNKNOWN_1C8C78
-//	CMP #$9F
-//	BEQ UNKNOWN_1C8D09
-//	CMP #$9E
-//	BEQ UNKNOWN_1C8D21
-//	CMP #$9C
-//	BEQ UNKNOWN_1C8D2A
-//	TAY
-//	CMP #$FF
-//	BEQ UNKNOWN_1C8CD8
-//	AND #$C0
-//	CMP #$C0
-//	BEQ UNKNOWN_1C8CE8
-//	JMP UNKNOWN_1C8D33
-//UNKNOWN_1C8CD8:
-//	LDA UNKNOWN_07BC,X
-//	BEQ UNKNOWN_1C8CF7
-//	DEC UNKNOWN_07BC,X
-//	LDA UNKNOWN_07B0,X
-//	STA UNKNOWN_07AC,X
-//	BNE UNKNOWN_1C8CF7
-//UNKNOWN_1C8CE8:
-//	TYA
-//	AND #$3F
-//	STA UNKNOWN_07BC,X
-//	DEC UNKNOWN_07BC,X
-//	LDA UNKNOWN_07AC,X
-//	STA UNKNOWN_07B0,X
-//UNKNOWN_1C8CF7:
-//	JMP UNKNOWN_1C8CB9
-//UNKNOWN_1C8CFA:
-//	JSR UNKNOWN_1C8BA1
-//	JSR UNKNOWN_1C89CC
-//	JMP UNKNOWN_1C8C88
-//UNKNOWN_1C8D03:
-//	JMP UNKNOWN_1C8E17
-//UNKNOWN_1C8D06:
-//	JMP UNKNOWN_1C8DED
-//UNKNOWN_1C8D09:
-//	JSR UNKNOWN_1C8E7C
-//	STA UNKNOWN_079A,X
-//	JSR UNKNOWN_1C8E7C
-//	STA UNKNOWN_079D,X
-//	JMP UNKNOWN_1C8CB9
-//	JSR UNKNOWN_1C8E7C
-//	JSR UNKNOWN_1C8E7C
-//	JMP UNKNOWN_1C8CB9
-//UNKNOWN_1C8D21:
-//	JSR UNKNOWN_1C8E7C
-//	STA $0791
-//	JMP UNKNOWN_1C8CB9
-//UNKNOWN_1C8D2A:
-//	JSR UNKNOWN_1C8E7C
-//	STA $0790
-//	JMP UNKNOWN_1C8CB9
-//UNKNOWN_1C8D33:
-//	TYA
-//	AND #$B0
-//	CMP #$B0
-//	BNE UNKNOWN_1C8D52
-//	TYA
-//	AND #$0F
-//	CLC
-//	ADC $0791
-//	TAY
-//	LDA UNKNOWN_1C9074,Y
-//	STA UNKNOWN_07B8,X
-//	TAY
-//	TXA
-//	CMP #$02
-//	BEQ UNKNOWN_1C8D06
-//UNKNOWN_1C8D4E:
-//	JSR UNKNOWN_1C8E7C
-//	TAY
-//UNKNOWN_1C8D52:
-//	TYA
-//	STA UNKNOWN_07C3,X
-//	TXA
-//	CMP #$03
-//	BEQ UNKNOWN_1C8D03
-//	PHA
-//	LDX $BE
-//	LDA UNKNOWN_1C8FEA + 1,Y
-//	BEQ UNKNOWN_1C8D87
-//	LDA $0790
-//	BPL UNKNOWN_1C8D73
-//	AND #$7F
-//	STA $B3
-//	TYA
-//	CLC
-//	SBC $B3
-//	JMP UNKNOWN_1C8D78
-//UNKNOWN_1C8D73:
-//	TYA
-//	CLC
-//	ADC $0790
-//UNKNOWN_1C8D78:
-//	TAY
-//	LDA UNKNOWN_1C8FEA + 1,Y
-//	STA $0780,X
-//	LDA UNKNOWN_1C8FEA + 0,Y
-//	ORA #$08
-//	STA $0781,X
-//UNKNOWN_1C8D87:
-//	TAY
-//	PLA
-//	TAX
-//	TYA
-//	BNE UNKNOWN_1C8D9C
-//	LDA #$00
-//	STA $B0
-//	TXA
-//	CMP #$02
-//	BEQ UNKNOWN_1C8DA1
-//	LDA #$10
-//	STA $B0
-//	BNE UNKNOWN_1C8DA1
-//UNKNOWN_1C8D9C:
-//	LDA UNKNOWN_079D,X
-//	STA $B0
-//UNKNOWN_1C8DA1:
-//	TXA
-//	DEC UNKNOWN_07C7+1,X
-//	CMP UNKNOWN_07C7+1,X
-//	BEQ UNKNOWN_1C8DE7
-//	INC UNKNOWN_07C7+1,X
-//	LDY $BE
-//	TXA
-//	CMP #$02
-//	BEQ UNKNOWN_1C8DC7
-//	LDA UNKNOWN_079A,X
-//	AND #$1F
-//	BEQ UNKNOWN_1C8DC7
-//	LDA $B0
-//	CMP #$10
-//	BEQ UNKNOWN_1C8DC9
-//	AND #$F0
-//	ORA #$00
-//	BNE UNKNOWN_1C8DC9
-//UNKNOWN_1C8DC7:
-//	LDA $B0
-//UNKNOWN_1C8DC9:
-//	STA SQ1_VOL,Y
-//	LDA UNKNOWN_07C0,X
-//	STA SQ1_SWEEP,Y
-//	LDA $0780,Y
-//	STA SQ1_LO,Y
-//	LDA $0781,Y
-//	STA SQ1_HI,Y
-//UNKNOWN_1C8DDE:
-//	LDA UNKNOWN_07B8,X
-//	STA UNKNOWN_07B4,X
-//	JMP UNKNOWN_1C8C88
-//UNKNOWN_1C8DE7:
-//	INC UNKNOWN_07C7+1,X
-//	JMP UNKNOWN_1C8DDE
-//UNKNOWN_1C8DED:
-//	LDA $079C
-//	AND #$1F
-//	BNE UNKNOWN_1C8E11
-//	LDA $079C
-//	AND #$C0
-//	BNE UNKNOWN_1C8DFE
-//UNKNOWN_1C8DFB:
-//	TYA
-//	BNE UNKNOWN_1C8E06
-//UNKNOWN_1C8DFE:
-//	CMP #$C0
-//	BEQ UNKNOWN_1C8DFB
-//	LDA #$FF
-//	BNE UNKNOWN_1C8E11
-//UNKNOWN_1C8E06:
-//	CLC
-//	ADC #$FF
-//	ASL
-//	ASL
-//	CMP #$3C
-//	BCC UNKNOWN_1C8E11
-//	LDA #$3C
-//UNKNOWN_1C8E11:
-//	STA UNKNOWN_079D+2
-//	JMP UNKNOWN_1C8D4E
-//UNKNOWN_1C8E17:
-//	TYA
-//	PHA
-//	JSR UNKNOWN_1C8E3E
-//	PLA
-//	AND #$3F
-//	TAY
-//	JSR UNKNOWN_1C8E26
-//	JMP UNKNOWN_1C8DDE
-//UNKNOWN_1C8E26:
-//	LDA UNKNOWN_07F8
-//	BNE UNKNOWN_1C8E3D
-//	LDA UNKNOWN_1C89A7 + 0,Y
-//	STA NOISE_VOL
-//	LDA UNKNOWN_1C89A7 + 1,Y
-//	STA NOISE_LO
-//	LDA UNKNOWN_1C89A7 + 2,Y
-//	STA NOISE_HI
-//UNKNOWN_1C8E3D:
-//	RTS
+    // a_reg = 0;
+    // y_reg = a_reg;
+    switch(x_reg){
+        case 0:
+            ME_Pulse1Index = cast(ubyte) ((*unk_b6_pointer)[(GetInstrumentTrack(x_reg/2))+1].f*2);
+            break;
+        case 2:
+            ME_Pulse2Index = cast(ubyte) ((*unk_b6_pointer)[(GetInstrumentTrack(x_reg/2))+1].f*2);
+            break;
+        case 4:
+            ME_TriangleIndex = cast(ubyte) ((*unk_b6_pointer)[(GetInstrumentTrack(x_reg/2))+1].f*2);
+            break;
+        case 6:
+            ME_NoiseIndex = cast(ubyte) ((*unk_b6_pointer)[(GetInstrumentTrack(x_reg/2))+1].f*2);
+            break;
+        default:
+            break;
+    }
+    a_reg = x_reg;
+    a_reg >>= 1;
+    x_reg = a_reg;
+    a_reg = 0;
+    y_reg = a_reg;
+    return UNKNOWN_1C8C53();
+}
 
-//UNKNOWN_1C8E3E:
-//	TYA
-//	AND #$C0
-//	CMP #$40
-//	BEQ @UNKNOWN0
-//	CMP #$80
-//	BEQ @UNKNOWN1
-//	RTS
-//@UNKNOWN0:
-//	LDA #$0E
-//	STA $B1
-//	LDA #$07
-//	LDY #$00
-//	BEQ @UNKNOWN2
-//@UNKNOWN1:
-//	LDA #$0E
-//	STA $B1
-//	LDA #$0F
-//	LDY #$02
-//@UNKNOWN2:
-//	STA DMC_LEN
-//	STY DMC_START
-//	LDA UNKNOWN_07F7
-//	BNE @UNKNOWN3
-//	LDA $B1
-//	STA DMC_FREQ
-//	LDA #$0F
-//	STA SND_CHN
-//	LDA #$00
-//	STA DMC_RAW
-//	LDA #$1F
-//	STA SND_CHN
-//@UNKNOWN3:
-//	RTS
+void UNKNOWN_1C8C36() @safe {
+    B28_0299();
+}
 
-//UNKNOWN_1C8E7C:
-//	LDY UNKNOWN_07AC,X
-//	INC UNKNOWN_07AC,X
-//	LDA ($B6),Y
-//	RTS
+//Next Phrase?
+void B28_0c3a() @safe {
+    a_reg = x_reg;
+    a_reg <<= 1;
+    x_reg = a_reg;
+    switch(x_reg){
+        case 0:
+            unk_b6_pointer = MusicHeader.pulse1;
+            break;
+        case 2:
+            unk_b6_pointer = MusicHeader.pulse2;
+            break;
+        case 4:
+            unk_b6_pointer = MusicHeader.triangle;
+            break;
+        case 6:
+            unk_b6_pointer = MusicHeader.noise;
+            break;
+        default:
+            break;
+    }
+    a_reg = x_reg;
+    a_reg >>= 1;
+    x_reg = a_reg;
+    switch(x_reg){
+        case 0:
+            ME_Pulse1Index += 2;
+            y_reg = ME_Pulse1Index;
+            break;
+        case 1:
+            ME_Pulse2Index += 2;
+            y_reg = ME_Pulse2Index;
+            break;
+        case 2:
+            ME_TriangleIndex += 2;
+            y_reg = ME_TriangleIndex;
+            break;
+        case 3:
+            ME_NoiseIndex += 2;
+            y_reg = ME_NoiseIndex;
+            break;
+        default:
+            break;
+    }
+    return UNKNOWN_1C8C53();
+}
 
-//UNKNOWN_1C8E85:
-//	.WORD UNKNOWN_1C8EE9
-//	.WORD UNKNOWN_1C8EF0
-//	.WORD UNKNOWN_1C8F14
-//	.WORD UNKNOWN_1C8F27
-//	.WORD UNKNOWN_1C8F30
-//	.WORD UNKNOWN_1C8F36
-//	.WORD UNKNOWN_1C8EE2
-//	.WORD UNKNOWN_1C8F38
-//	.WORD UNKNOWN_1C8F41
-//	.WORD UNKNOWN_1C8F33
-//	.WORD UNKNOWN_1C8F4A
-//	.WORD UNKNOWN_1C8F53
-//	.WORD UNKNOWN_1C8F5B
-//	.WORD UNKNOWN_1C8F63
-//	.WORD UNKNOWN_1C8F6A
-//	.WORD UNKNOWN_1C8F73
-//	.WORD UNKNOWN_1C8FBE
-//	.WORD UNKNOWN_1C8FC6
-//	.WORD UNKNOWN_1C8F8C
-//	.WORD UNKNOWN_1C8FDA
-//	.WORD UNKNOWN_1C8FA1
-//	.WORD UNKNOWN_1C8EBD
-//	.WORD UNKNOWN_1C8EFA
-//	.WORD UNKNOWN_1C8ED9
-//	.WORD UNKNOWN_1C8ED2
-//	.WORD UNKNOWN_1C8EC7
-//	.WORD UNKNOWN_1C8EC3
-//	.WORD UNKNOWN_1C8F10
+void UNKNOWN_1C8C53() @safe {
+    a_reg = x_reg;
+    a_reg <<= 1;
+    x_reg = a_reg;
+    a_reg = cast(ubyte) (*unk_b6_pointer)[GetInstrumentTrack(x_reg/2)].f;
+    switch(x_reg){
+        case 0:
+            //MusicHeader.pulse1 = (*unk_b6_pointer)[y_reg].pointer;
+            break;
+        case 2:
+            //MusicHeader.pulse2 = (*unk_b6_pointer)[y_reg].pointer;
+            break;
+        case 4:
+            //MusicHeader.triangle = (*unk_b6_pointer)[y_reg].pointer;
+            break;
+        case 6:
+            //MusicHeader.noise = (*unk_b6_pointer)[y_reg].pointer;
+            break;
+        default:
+            break;
+    }
+    if (a_reg == 0){
+        return UNKNOWN_1C8C36();
+    }
+    if ((cast(byte) a_reg) == -1){
+        return DoLoop();
+    }
+    a_reg = x_reg;
+    a_reg >>= 1;
+    x_reg = a_reg;
+    a_reg = 0;
+    MusicChannel_Counter[x_reg] = a_reg;
+    a_reg = 1;
+    MusicChannel_NoteLengthCounter[x_reg] = a_reg;
+    return UNKNOWN_1C8C95();
+}
 
-//UNKNOWN_1C8EBD:
-//	.BYTE $76, $11, $11, $14, $31, $FF
-//UNKNOWN_1C8EC3:
-//	.BYTE $33, $45, $66, $FF
-//UNKNOWN_1C8EC7:
-//	.BYTE $91, $91, $91, $91, $91, $91, $91, $91, $91, $91, $F0
-//UNKNOWN_1C8ED2:
-//	.BYTE $23, $33, $32, $22, $22, $22, $FF
-//UNKNOWN_1C8ED9:
-//	.BYTE $98, $76, $63, $22, $87, $76, $53, $11, $F0
-//UNKNOWN_1C8EE2:
-//	.BYTE $23, $56, $78, $88, $88, $87, $FF
-//UNKNOWN_1C8EE9:
-//	.BYTE $23, $34, $56, $77, $65, $54, $FF
-//UNKNOWN_1C8EF0:
-//	.BYTE $5A, $98, $88, $77, $66, $66, $65, $55, $55, $FF
-//UNKNOWN_1C8EFA:
-//	.BYTE $11, $11, $22, $22, $33, $33, $44, $44, $44, $45, $55, $55, $55, $66, $66, $77, $78, $88, $76, $54, $32, $FF
-//UNKNOWN_1C8F10:
-//	.BYTE $11, $11, $22, $FF
-//UNKNOWN_1C8F14:
-//	.BYTE $11, $11, $22, $22, $33, $33, $44, $44, $44, $45, $55, $55, $55, $66, $66, $77, $78, $88, $FF
-//UNKNOWN_1C8F27:
-//	.BYTE $F9, $87, $77, $77, $66, $65, $55, $44, $FF
-//UNKNOWN_1C8F30:
-//	.BYTE $A8, $76, $FF
-//UNKNOWN_1C8F33:
-//	.BYTE $74, $32, $FF
-//UNKNOWN_1C8F36:
-//	.BYTE $99, $FF
-//UNKNOWN_1C8F38:
-//	.BYTE $DC, $BA, $99, $88, $87, $76, $55, $44, $FF
-//UNKNOWN_1C8F41:
-//	.BYTE $23, $44, $33, $33, $33, $33, $33, $32, $FF
-//UNKNOWN_1C8F4A:
-//	.BYTE $77, $76, $65, $55, $44, $43, $32, $21, $F0
-//UNKNOWN_1C8F53:
-//	.BYTE $44, $43, $33, $32, $22, $11, $11, $F0
-//UNKNOWN_1C8F5B:
-//	.BYTE $33, $33, $22, $22, $11, $11, $11, $F0
-//UNKNOWN_1C8F63:
-//	.BYTE $22, $22, $22, $11, $11, $11, $F0
-//UNKNOWN_1C8F6A:
-//	.BYTE $11, $11, $11, $11, $11, $11, $01, $00, $F0
-//UNKNOWN_1C8F73:
-//	.BYTE $99, $88, $77, $76, $66, $55, $54, $44, $33, $33, $33, $32, $22, $22, $22, $22, $21, $11, $11, $11, $11, $11, $11, $11, $F0
-//UNKNOWN_1C8F8C:
-//	.BYTE $65, $55, $54, $44, $33, $33, $33, $33, $22, $22, $22, $22, $11, $11, $11, $11, $11, $11, $11, $11, $F0
-//UNKNOWN_1C8FA1:
-//	.BYTE $FB, $BA, $AA, $99, $99, $99, $98, $88, $77, $77, $77, $66, $66, $66, $55, $54, $44, $44, $43, $33, $33, $22, $22, $22, $22, $11, $11, $11, $F0
-//UNKNOWN_1C8FBE:
-//	.BYTE $23, $45, $55, $44, $33, $33, $22, $FF
-//UNKNOWN_1C8FC6:
-//	.BYTE $87, $65, $43, $21, $44, $33, $21, $11, $32, $21, $11, $11, $21, $11, $11, $11, $11, $11, $11, $FF
-//UNKNOWN_1C8FDA:
-//	.BYTE $66, $65, $42, $21, $32, $21, $11, $11, $21, $11, $11, $11, $11, $11, $11, $FF
+void B28_0c78() @safe {
+    return B28_0c3a();
+}
 
-//UNKNOWN_1C8FEA:
-//	.BYTE $07, $F0
-//	.BYTE $00, $00
-//	.BYTE $06, $AE
-//	.BYTE $06, $4E
-//	.BYTE $05, $F3
-//	.BYTE $05, $9E
-//	.BYTE $05, $4D
-//	.BYTE $05, $01
-//	.BYTE $04, $B9
-//	.BYTE $04, $75
-//	.BYTE $04, $35
-//	.BYTE $03, $F8
-//	.BYTE $03, $BF
-//	.BYTE $03, $89
-//	.BYTE $03, $57
-//	.BYTE $03, $27
-//	.BYTE $02, $F9
-//	.BYTE $02, $CF
-//	.BYTE $02, $A6
-//	.BYTE $02, $80
-//	.BYTE $02, $5C
-//	.BYTE $02, $3A
-//	.BYTE $02, $1A
-//	.BYTE $01, $FC
-//	.BYTE $01, $DF
-//	.BYTE $01, $C4
-//	.BYTE $01, $AB
-//	.BYTE $01, $93
-//	.BYTE $01, $7C
-//	.BYTE $01, $67
-//	.BYTE $01, $52
-//	.BYTE $01, $3F
-//	.BYTE $01, $2D
-//	.BYTE $01, $1C
-//	.BYTE $01, $0C
-//	.BYTE $00, $FD
-//	.BYTE $00, $EE
-//	.BYTE $00, $E1
-//	.BYTE $00, $D4
-//	.BYTE $00, $C8
-//	.BYTE $00, $BD
-//	.BYTE $00, $B2
-//	.BYTE $00, $A8
-//	.BYTE $00, $9F
-//	.BYTE $00, $96
-//	.BYTE $00, $8D
-//	.BYTE $00, $85
-//	.BYTE $00, $7E
-//	.BYTE $00, $76
-//	.BYTE $00, $70
-//	.BYTE $00, $69
-//	.BYTE $00, $63
-//	.BYTE $00, $5E
-//	.BYTE $00, $58
-//	.BYTE $00, $53
-//	.BYTE $00, $4F
-//	.BYTE $00, $4A
-//	.BYTE $00, $46
-//	.BYTE $00, $42
-//	.BYTE $00, $3E
-//	.BYTE $00, $3A
-//	.BYTE $00, $37
-//	.BYTE $00, $34
-//	.BYTE $00, $31
-//	.BYTE $00, $2E
-//	.BYTE $00, $2B
-//	.BYTE $00, $29
+void B28_0c7b() @safe {
+    B28_0b70();
+    a_reg = 0;
+    x_reg = 0;
+    unk_be = a_reg;
+    if (a_reg == 0){
+        return UNKNOWN_1C8C95();
+    }
+    return UNKNOWN_1C8C85();
+}
 
-//UNKNOWN_1C9070:
-//	.BYTE $00, $0A, $00, $01
+void UNKNOWN_1C8C85() @safe {
+    a_reg = x_reg;
+    a_reg >>= 1;
+    x_reg = a_reg;
+    return NextInstrumentProbably();
+}
 
-//UNKNOWN_1C9074:
-//	.BYTE $04, $08, $10, $20, $40, $18, $30, $0C, $0A, $05, $02, $01, $05, $0A, $14, $28, $50, $1E, $3C, $0F, $0C, $06, $03, $02, $06, $0C, $18, $30, $60, $24, $48, $12, $10, $08, $03, $01, $04, $02, $00, $90, $07, $0E, $1C, $38, $70, $2A, $54, $15, $12, $09, $03, $01, $02, $08, $10, $20, $40, $80, $30, $60, $18, $15, $0A, $04, $01, $02, $C0, $09, $12, $24, $48, $90, $36, $6C, $1B, $18, $0A, $14, $28, $50, $A0, $3C, $78, $1E, $1A, $0D, $05, $01, $02, $17, $0B, $16, $2C, $58, $B0, $42, $84, $21, $1D, $0E, $05, $01, $02, $17
-// Music_Table_Ids:
-//     header_offset Ocarina_header
-//     header_offset Flippant_Battle_header
-//     header_offset Dangerous_Battle_header
-//     header_offset Hippie_Battle_header
-//     header_offset Win_Battle_header
-//     header_offset Pollyanna_header
-//     header_offset Bein_Friends_header
-//     header_offset Yucca_Desert_header
-//     header_offset Magicant_BGM_header
-//     header_offset Snowman_BGM_header
-//     header_offset Mt_Itoi_BGM_header
-//     header_offset Factory_BGM_header
-//     header_offset Ghastly_Site_header
-//     header_offset Twinkle_Elementary_BGM_header
-//     header_offset Humoresque_Of_A_Little_Dog_header
-//     header_offset Poltergeist_header
-//     header_offset Underground_BGM_header
-//     header_offset Home_BGM_header
-//     header_offset Approaching_Mt_Itoi_header
-//     header_offset Paradise_Line_BGM_header
-//     header_offset Fallin_Love_header
-//     header_offset Mother_Earth_header
-//     header_offset Tank_BGM_header
-//     header_offset Monkey_Cave_BGM_header
-// .define header_offset2(ta) .byte ta-Music_Table_2
-// Music_Table_2_Ids:
-//     header_offset2 Queen_Marys_Song_header
-//     header_offset2 Wisdom_Of_The_World_header
-//     header_offset2 Tombstone_BGM_header
-//     header_offset2 Game_Over_BGM_header
-//     header_offset2 Big_Victory_BGM_header
-//     header_offset2 Airplane_BGM_header
-//     header_offset2 Level_Up_BGM_header
-//     header_offset2 Recovery_BGM_header
-//     header_offset2 Fanfare_BGM_header
-//     header_offset2 Live_House_BGM_header
-//     header_offset2 All_That_I_Needed_Was_You_header
+void NextInstrumentProbably() @safe {
+    x_reg++;
+    a_reg = x_reg;
+    if (a_reg == 4){
+        return;
+    }
+    a_reg = unk_be;
+    a_reg += 4;
+    unk_be = a_reg;
+    return UNKNOWN_1C8C95();
+}
+void UNKNOWN_1C8C95() @safe {
+    a_reg = x_reg;
+    a_reg <<= 1;
+    x_reg = a_reg;
+    switch(x_reg){
+        case 0:
+            unk_b6_pointer = ME_CurrentPulse1Phrase;
+            break;
+        case 2:
+            unk_b6_pointer = ME_CurrentPulse2Phrase;
+            break;
+        case 4:
+            unk_b6_pointer = ME_CurrentTrianglePhrase;
+            break;
+        case 6:
+            unk_b6_pointer = ME_CurrentNoisePhrase;
+            break;
+        default:
+            break;
+    }
+    if ((*unk_b6_pointer)[GetInstrumentTrack(x_reg/2)].f == 0xff){
+        return UNKNOWN_1C8C85();
+    }
+    a_reg = x_reg;
+    a_reg >>= 1;
+    x_reg = a_reg;
+    MusicChannel_NoteLengthCounter[x_reg]--;
+    if (MusicChannel_NoteLengthCounter[x_reg] != 0){
+        return StillPlaying();
+    }
+    a_reg = 0;
+    unk_7cd[x_reg] = a_reg;
+    unk_7d1[x_reg] = a_reg;
+    return CmdInterpret();
+}
 
-//     header_offset2 Melody_1_header
-//     header_offset2 Melody_2_header
-//     header_offset2 Melody_3_header
-//     header_offset2 Melody_4_header
-//     header_offset2 Melody_5_header
-//     header_offset2 Melody_6_header
-//     header_offset2 Melody_7_header
-//     header_offset2 Melody_8_header
+//B28_0cb9
+void CmdInterpret() @safe {
+    start:
+    //interpret music commands
+    a_reg = ReadByte();
+    //debug
+    //writeln(a_reg, " this byte is for");
+    switch(x_reg){
+        case 0:
+            current_instrument = "pulse1";
+            break;
+        case 1:
+            current_instrument = "pulse2";
+            break;
+        case 2:
+            current_instrument = "triangle";
+            break;
+        case 3:
+            current_instrument = "noise";
+            break;
+        default:
+            break;
+    }
+    if (a_reg == 0){
+        return B28_0c78();
+    }
+    if (a_reg == 0x9f){
+        Set_Timbre();
+        goto start;
+    }
+    if (a_reg == 0x9e){
+        SetNLT();
+        goto start;
+    }
+    if (a_reg == 0x9c){
+        SetTranspose();
+        goto start;
+    }
+    y_reg = a_reg;
+    if (a_reg == 0xff){
+        EndRepeat();
+        goto start;
+    }
+    a_reg &= 0xc0;
+    if (a_reg == 0xc0){
+        StartRepeat();
+        goto start;
+    }
+    return NotACommand();
+}
 
-//     header_offset2 VS_Giegue_BGM_header
-//     header_offset2 Ending_JP_BGM_header
-//     header_offset2 Zoo_BGM_header
-//     header_offset2 Phone_BGM_header
-//     header_offset2 Youngtown_BGM_header
-//     header_offset2 Cave_Of_The_Tail_BGM_header
+// Command FF, end repeat section
+void EndRepeat() @safe {
+    a_reg = MusicChannel_LoopCounter[x_reg];
+    if (a_reg == 0){
+        return;
+    }
+    MusicChannel_LoopCounter[x_reg]--;
+    MusicChannel_Counter[x_reg] = MusicChannel_LSOffset[x_reg];
+}
+
+// Commands C0-FE, repeat until FF
+void StartRepeat() @safe {
+    a_reg &= 0x3f;
+    MusicChannel_LoopCounter[x_reg] = a_reg;
+    MusicChannel_LoopCounter[x_reg]--;
+    MusicChannel_LSOffset[x_reg] = MusicChannel_Counter[x_reg];
+}
+
+// Note is still playing
+void StillPlaying() @safe {
+    B28_0ba1();
+    B28_09cc();
+    return NextInstrumentProbably();
+}
+
+// Play noise note
+void PlayNoiseNote() @safe {
+    return UNKNOWN_1C8E17();
+}
+
+// Set triangle note length
+void TriangleSetLength() @safe {
+    return B28_0ded();
+}
+
+// Command 9F, set envelope
+void Set_Timbre() @safe {
+    ME_Envelopes0[x_reg] = ReadByte();
+    ME_Envelopes1[x_reg] = ReadByte();
+}
+
+// Unreachable command, consume 2 bytes and do nothing
+void B28_0d18() @safe {
+    ReadByte();
+    ReadByte();
+}
+
+// Command 9E, set notelength table offset
+void SetNLT() @safe {
+    a_reg = ReadByte();
+    switch(a_reg){
+        case 0x00:
+            MusicHeader.note_lengths = &NLT_00;
+            break;
+        case 0x0C:
+            MusicHeader.note_lengths = &NLT_0C;
+            break;
+        case 0x18:
+            MusicHeader.note_lengths = &NLT_18;
+            break;
+        case 0x28:
+            MusicHeader.note_lengths = &NLT_28;
+            break;
+        case 0x35:
+            MusicHeader.note_lengths = &NLT_35;
+            break;
+        case 0x43:
+            MusicHeader.note_lengths = &NLT_43;
+            break;
+        case 0x4C:
+            MusicHeader.note_lengths = &NLT_4C;
+            break;
+        case 0x5a:
+            MusicHeader.note_lengths = &NLT_5A;
+            break;
+        default:
+            MusicHeader.note_lengths = null;
+            break;
+    }
+}
+
+// Command 9C, set transpose
+void SetTranspose() @safe {
+    MusicHeader.transpose = ReadByte();
+}
+
+void NotACommand() @safe {
+    a_reg = y_reg;
+    a_reg &= 0xb0;
+    if (a_reg == 0xb0){
+    // Command B0-BF, set notelength and play note
+        a_reg = y_reg;
+        a_reg &= 0xf;
+        a_reg = (*MusicHeader.note_lengths)[a_reg];
+        MusicChannel_NewNoteLength[x_reg] = a_reg;
+        y_reg = a_reg;
+        a_reg = x_reg;
+        if (a_reg == 2){
+            return TriangleSetLength();
+        }
+        return PulseSetLengthAndPlay();
+    } else {
+        return PlayNote();
+    }
+}
+
+void PulseSetLengthAndPlay() @safe {
+    a_reg = ReadByte();
+    y_reg = a_reg;
+    return PlayNote();
+}
+
+// Play note
+void PlayNote() @safe {
+    a_reg = y_reg;
+    unk_7c3[x_reg] = a_reg;
+    a_reg = x_reg;
+    if (a_reg == 3){
+        return PlayNoiseNote();
+    }
+    a_stash ~= a_reg;
+    x_reg = unk_be;
+    a_reg = PitchTable[y_reg/2] & 0xff;
+    if(a_reg != 0){
+        a_reg = MusicHeader.transpose;
+        if (a_reg > 0x7f){
+            a_reg &= 0x7f;
+            unk_b3 = a_reg;
+            y_reg = a_reg;
+            a_reg -= unk_b3;
+            return B28_0d78();
+        } else {
+            return B28_0d73();
+        }
+    } else {
+        return B28_0d87();
+    }
+}
+
+void B28_0d73() @safe {
+    a_reg = y_reg;
+    a_reg += MusicHeader.transpose;
+    return B28_0d78();
+}
+void B28_0d78() @safe {
+    y_reg = a_reg;
+    a_reg = PitchTable[y_reg/2] & 0xff;
+    switch(x_reg){
+        case 0:
+            currptr_pulse0[0] = a_reg;
+            break;
+        case 4:
+            currptr_pulse1[0] = a_reg;
+            break;
+        case 8:
+            currptr_triangle[0] = a_reg;
+            break;
+        default:
+            break;
+    }
+    a_reg = PitchTable[y_reg/2] >> 8;
+    a_reg |= 8;
+    switch(x_reg){
+        case 0:
+            currptr_pulse0[1] = a_reg;
+            break;
+        case 4:
+            currptr_pulse1[1] = a_reg;
+            break;
+        case 8:
+            currptr_triangle[1] = a_reg;
+            break;
+        default:
+            break;
+    }
+    return B28_0d87();
+}
+void B28_0d87() @safe {
+    y_reg = a_reg;
+    a_reg = a_stash.front;
+    a_stash.popFront();
+    x_reg = a_reg;
+    a_reg = y_reg;
+    if (a_reg == 0){
+        a_reg = 0;
+        unk_b0 = a_reg;
+        a_reg = x_reg;
+        if (a_reg != 2){
+            a_reg = 0x10;
+            unk_b0 = a_reg;
+        }
+    } else {
+        a_reg = ME_Envelopes1[x_reg];
+        unk_b0 = a_reg;
+    }
+    a_reg = x_reg;
+    unk_7c7[1+x_reg]--;
+    if (a_reg == unk_7c7[1+x_reg]) {
+        return UNKNOWN_1C8DE7();
+    }
+    unk_7c7[1+x_reg]++;
+    y_reg = unk_be;
+    a_reg = x_reg;
+    if (a_reg == 2){
+        goto UNKNOWN_1C8DC7;
+    }
+    a_reg = ME_Envelopes0[x_reg];
+    a_reg &= 0x1f;
+    if (a_reg == 0){
+        goto UNKNOWN_1C8DC7;
+    }
+    a_reg = unk_b0;
+    if (a_reg == 0x10){
+        goto UNKNOWN_1C8DC9;
+    }
+    a_reg &= 0xf0;
+    a_reg |= 0; //?
+    if (a_reg != 0){
+        goto UNKNOWN_1C8DC9;
+    }
+    UNKNOWN_1C8DC7:
+    a_reg = unk_b0;
+    UNKNOWN_1C8DC9:
+    switch(y_reg){
+        case 0:
+            nes.SQ1_VOL = a_reg;
+            break;
+        case 4:
+            nes.SQ2_VOL = a_reg;
+            break;
+        case 8:
+            nes.TRI_LINEAR = a_reg;
+            break;
+        default:
+            break;
+    }
+    a_reg = UNK_7C0[x_reg];
+    switch(y_reg){
+        case 0:
+            nes.SQ1_SWEEP = a_reg;
+            nes.SQ1_LO = currptr_pulse0[0];
+            nes.SQ1_HI = currptr_pulse0[1];
+            break;
+        case 4:
+            nes.SQ2_SWEEP = a_reg;
+            nes.SQ2_LO = currptr_pulse1[0];
+            nes.SQ2_HI = currptr_pulse1[1];
+            break;
+        case 8:
+            nes.TRI_LO = currptr_triangle[0];
+            nes.TRI_HI = currptr_triangle[1] & 7;
+            break;
+        default:
+            break;
+    }
+    return UNKNOWN_1C8DDE();
+}
+void UNKNOWN_1C8DDE() @safe {
+    a_reg = MusicChannel_NewNoteLength[x_reg];
+    MusicChannel_NoteLengthCounter[x_reg] = a_reg;
+    return NextInstrumentProbably();
+}
+void UNKNOWN_1C8DE7() @safe {
+    unk_7c7[x_reg+1]++;
+    return UNKNOWN_1C8DDE();
+}
+
+void B28_0ded() @safe {
+    a_reg = ME_Envelopes0[2];
+    a_reg &= 0x1f;
+    if (a_reg != 0){
+        goto UNKNOWN_1C8E11;
+    }
+    a_reg = ME_Envelopes0[2];
+    a_reg &= 0xc0;
+    if (a_reg != 0){
+        goto UNKNOWN_1C8DFE;
+    }
+    UNKNOWN_1C8DFB:
+    a_reg = y_reg;
+    if (a_reg != 0){
+        goto UNKNOWN_1C8E06;
+    }
+    UNKNOWN_1C8DFE:
+    if (a_reg == 0xc0){
+        goto UNKNOWN_1C8DFB;
+    }
+    a_reg = 0xff;
+    if (a_reg != 0){
+        goto UNKNOWN_1C8E11;
+    }
+    UNKNOWN_1C8E06:
+    a_reg += 0xff;
+    a_reg <<= 2;
+    if (a_reg < 0x3c){
+        goto UNKNOWN_1C8E11;
+    }
+    a_reg = 0x3c;
+    UNKNOWN_1C8E11:
+    ME_Envelopes1[2] = a_reg;
+    return PulseSetLengthAndPlay();
+}
+void UNKNOWN_1C8E17() @safe {
+    a_reg = y_reg;
+    a_stash ~= a_reg;
+    B28_0e3e();
+    a_reg = a_stash.front;
+    a_stash.popFront();
+    a_reg &= 0x3f;
+    y_reg = a_reg;
+    UNKNOWN_1C8E26();
+    return UNKNOWN_1C8DDE();
+}
+
+void UNKNOWN_1C8E26() @safe {
+    a_reg = soundactive_noise;
+    if (a_reg != 0){
+        return;
+    }
+    nes.NOISE_VOL = Noise_Instruments[y_reg];
+    nes.NOISE_LO = Noise_Instruments[y_reg+1];
+    nes.NOISE_HI = Noise_Instruments[y_reg+2];
+}
+
+void B28_0e3e() @safe {
+    a_reg = y_reg;
+    a_reg &= 0xc0;
+    if (a_reg == 0x40){
+        //is kick
+        return B28_0e4a();
+    } else if (a_reg == 0x80) {
+        //is snare
+        return B28_0e54();
+    }
+}
+
+void B28_0e4a() @safe {
+    //kick drum
+    a_reg = 0xe;
+    unk_b1 = a_reg;
+    //lda #dmc_samplelen sample_kick, B30_0071
+    a_reg = 0x7;
+    //ldy #dmc_sampleaddr sample_kick
+    y_reg = 0x0;
+    return B28_0e5c();
+}
+
+void B28_0e54() @safe {
+    //snare drum
+    a_reg = 0xe;
+    unk_b1 = a_reg;
+    //lda #dmc_samplelen sample_snare, B30_0171
+    a_reg = 0xf;
+    //ldy #dmc_sampleaddr sample_snare
+    y_reg = 0x2;
+    return B28_0e5c();
+}
+void B28_0e5c() @safe {
+    //dmc isnt actually supported yet.
+    //i cant imagine why :)
+    nes.DMC_LEN = a_reg;
+    nes.DMC_START = y_reg;
+    a_reg = disable_dmc;
+    if (a_reg != 0){
+        return;
+    }
+    nes.DMC_FREQ = unk_b1;
+    nes.SND_CHN = 0xf;
+    nes.DMC_RAW = 0;
+    nes.SND_CHN = 0x1f;
+    a_reg = 0x1f;
+}
+
+//fake function, for pointer math
+int GetInstrumentTrack(ubyte x) @safe {
+    switch(x){
+        case 0:
+            return ME_Pulse1Index/2;
+        case 1:
+            return ME_Pulse2Index/2;
+        case 2:
+            return ME_TriangleIndex/2;
+        case 3:
+            return ME_NoiseIndex/2;
+        default:
+            return 0;
+    }
+}
+
+ubyte ReadByte() @trusted {
+    y_reg = MusicChannel_Counter[x_reg];
+    MusicChannel_Counter[x_reg]++;
+    return (*(*unk_b6_pointer)[GetInstrumentTrack(x_reg)].pointer)[y_reg];
+}
+
+shared(ubyte[])*[] Volume_Envelope_Table = [
+&Volume_Envelope_0, // 00
+&Volume_Envelope_1, // 01
+&Volume_Envelope_2, // 02
+&Volume_Envelope_3, // 03
+&Volume_Envelope_4, // 04
+&Volume_Envelope_5, // 05
+&Volume_Envelope_6, // 06
+&Volume_Envelope_7, // 07
+&Volume_Envelope_8, // 08
+&Volume_Envelope_9, // 09
+&Volume_Envelope_10, // 0A
+&Volume_Envelope_11, // 0B
+&Volume_Envelope_12, // 0C
+&Volume_Envelope_13, // 0D
+&Volume_Envelope_14, // 0E
+&Volume_Envelope_15, // 0F
+&Volume_Envelope_16, // 10
+&Volume_Envelope_17, // 11
+&Volume_Envelope_18, // 12
+&Volume_Envelope_19, // 13
+&Volume_Envelope_20, // 14
+&Volume_Envelope_21, // 15
+&Volume_Envelope_22, // 16
+&Volume_Envelope_23, // 17
+&Volume_Envelope_24, // 18
+&Volume_Envelope_25, // 19
+&Volume_Envelope_26, // 1A
+&Volume_Envelope_27, // 1B
+];
+
+// Envelope divider/volume table
+shared ubyte[] Volume_Envelope_21 = [0x76,0x11,0x11,0x14,0x31,0xff];
+shared ubyte[] Volume_Envelope_26 = [0x33,0x45,0x66,0xff];
+shared ubyte[] Volume_Envelope_25 = [0x91,0x91,0x91,0x91,0x91,0x91,0x91,0x91,0x91,0x91,0xf0];
+shared ubyte[] Volume_Envelope_24 = [0x23,0x33,0x32,0x22,0x22,0x22,0xff];
+shared ubyte[] Volume_Envelope_23 = [0x98,0x76,0x63,0x22,0x87,0x76,0x53,0x11,0xf0];
+shared ubyte[] Volume_Envelope_6 = [0x23,0x56,0x78,0x88,0x88,0x87,0xff];
+shared ubyte[] Volume_Envelope_0 = [0x23,0x34,0x56,0x77,0x65,0x54,0xff];
+shared ubyte[] Volume_Envelope_1 = [0x5a,0x98,0x88,0x77,0x66,0x66,0x65,0x55,0x55,0xff];
+shared ubyte[] Volume_Envelope_22 = [0x11,0x11,0x22,0x22,0x33,0x33,0x44,0x44,0x44,0x45,0x55,0x55,0x55,0x66,0x66,0x77,0x78,0x88,0x76,0x54,0x32,0xff];
+shared ubyte[] Volume_Envelope_27 = [0x11,0x11,0x22,0xff];
+shared ubyte[] Volume_Envelope_2 = [0x11,0x11,0x22,0x22,0x33,0x33,0x44,0x44,0x44,0x45,0x55,0x55,0x55,0x66,0x66,0x77,0x78,0x88,0xff];
+shared ubyte[] Volume_Envelope_3 = [0xf9,0x87,0x77,0x77,0x66,0x65,0x55,0x44,0xff];
+shared ubyte[] Volume_Envelope_4 = [0xa8,0x76,0xff];
+shared ubyte[] Volume_Envelope_9 = [0x74,0x32,0xff];
+shared ubyte[] Volume_Envelope_5 = [0x99,0xff];
+shared ubyte[] Volume_Envelope_7 = [0xdc,0xba,0x99,0x88,0x87,0x76,0x55,0x44,0xff];
+shared ubyte[] Volume_Envelope_8 = [0x23,0x44,0x33,0x33,0x33,0x33,0x33,0x32,0xff];
+shared ubyte[] Volume_Envelope_10 = [0x77,0x76,0x65,0x55,0x44,0x43,0x32,0x21,0xf0];
+shared ubyte[] Volume_Envelope_11 = [0x44,0x43,0x33,0x32,0x22,0x11,0x11,0xf0];
+shared ubyte[] Volume_Envelope_12 = [0x33,0x33,0x22,0x22,0x11,0x11,0x11,0xf0];
+shared ubyte[] Volume_Envelope_13 = [0x22,0x22,0x22,0x11,0x11,0x11,0xf0];
+shared ubyte[] Volume_Envelope_14 = [0x11,0x11,0x11,0x11,0x11,0x11,0x01,0x00,0xf0];
+shared ubyte[] Volume_Envelope_15 = [0x99,0x88,0x77,0x76,0x66,0x55,0x54,0x44,0x33,0x33,0x33,0x32,0x22,0x22,0x22,0x22,0x21,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xf0];
+shared ubyte[] Volume_Envelope_18 = [0x65,0x55,0x54,0x44,0x33,0x33,0x33,0x33,0x22,0x22,0x22,0x22,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xf0];
+shared ubyte[] Volume_Envelope_20 = [0xfb,0xba,0xaa,0x99,0x99,0x99,0x98,0x88,0x77,0x77,0x77,0x66,0x66,0x66,0x55,0x54,0x44,0x44,0x43,0x33,0x33,0x22,0x22,0x22,0x22,0x11,0x11,0x11,0xf0];
+shared ubyte[] Volume_Envelope_16 = [0x23,0x45,0x55,0x44,0x33,0x33,0x22,0xff];
+shared ubyte[] Volume_Envelope_17 = [0x87,0x65,0x43,0x21,0x44,0x33,0x21,0x11,0x32,0x21,0x11,0x11,0x21,0x11,0x11,0x11,0x11,0x11,0x11,0xff];
+shared ubyte[] Volume_Envelope_19 = [0x66,0x65,0x42,0x21,0x32,0x21,0x11,0x11,0x21,0x11,0x11,0x11,0x11,0x11,0x11,0xff];
+
+
+//pitch table
+ushort[] PitchTable = [
+    0x07F0,0x0000,0x06AE,0x064E,0x05F3,0x059E,0x054D,0x0501,
+    0x04B9,0x0475,0x0435,0x03F8,0x03BF,0x0389,0x0357,0x0327,
+    0x02F9,0x02CF,0x02A6,0x0280,0x025C,0x023A,0x021A,0x01FC,
+    0x01DF,0x01C4,0x01AB,0x0193,0x017C,0x0167,0x0152,0x013F,
+    0x012D,0x011C,0x010C,0x00FD,0x00EE,0x00E1,0x00D4,0x00C8,
+    0x00BD,0x00B2,0x00A8,0x009F,0x0096,0x008D,0x0085,0x007E,
+    0x0076,0x0070,0x0069,0x0063,0x005E,0x0058,0x0053,0x004F,
+    0x004A,0x0046,0x0042,0x003E,0x003A,0x0037,0x0034,0x0031,
+    0x002E,0x002B,0x0029,0x000A,0x0001
+];
+
+// tempo note length offsets
+shared ubyte[] NLT_00 = [
+0x04,0x08,0x10,0x20,0x40,0x18,0x30,0x0c,
+0x0a,0x05,0x02,0x01
+];
+shared ubyte[] NLT_0C = [
+0x05,0x0a,0x14,0x28,0x50,0x1e,0x3c,0x0f,
+0x0c,0x06,0x03,0x02
+];
+shared ubyte[] NLT_18 = [
+0x06,0x0c,0x18,0x30,0x60,0x24,0x48,0x12,
+0x10,0x08,0x03,0x01,0x04,0x02,0x00,0x90
+];
+shared ubyte[] NLT_28 = [
+0x07,0x0e,0x1c,0x38,0x70,0x2a,0x54,0x15,
+0x12,0x09,0x03,0x01,0x02
+];
+shared ubyte[] NLT_35 = [
+0x08,0x10,0x20,0x40,0x80,0x30,0x60,0x18,
+0x15,0x0a,0x04,0x01,0x02,0xc0
+];
+shared ubyte[] NLT_43 = [
+0x09,0x12,0x24,0x48,0x90,0x36,0x6c,0x1b,
+0x18
+];
+shared ubyte[] NLT_4C = [
+0x0a,0x14,0x28,0x50,0xa0,0x3c,0x78,0x1e,
+0x1a,0x0d,0x05,0x01,0x02,0x17
+];
+shared ubyte[] NLT_5A = [
+0x0b,0x16,0x2c,0x58,0xb0,0x42,0x84,0x21,
+0x1d,0x0e,0x05,0x01,0x02,0x17
+];
+
+shared(MusHeader)*[] Music_Table_Ids = [
+null, //&Ocarina_header,
+null, //&Flippant_Battle_header,
+null, //&Dangerous_Battle_header,
+null, //&Hippie_Battle_header,
+null, //&Win_Battle_header,
+null, //&Pollyanna_header,
+null, //&Bein_Friends_header,
+null, //&Yucca_Desert_header,
+null, //&Magicant_BGM_header,
+null, //&Snowman_BGM_header,
+null, //&Mt_Itoi_BGM_header,
+null, //&Factory_BGM_header,
+null, //&Ghastly_Site_header,
+null, //&Twinkle_Elementary_BGM_header,
+null, //&Humoresque_Of_A_Little_Dog_header,
+null, //&Poltergeist_header,
+null, //&Underground_BGM_header,
+null, //&Home_BGM_header,
+null, //&Approaching_Mt_Itoi_header,
+null, //&Paradise_Line_BGM_header,
+null, //&Fallin_Love_header,
+&Mother_Earth_header,
+null, //&Tank_BGM_header,
+null, //&Monkey_Cave_BGM_header,
+];
+MusHeader*[] Music_Table_2_Ids = [
+//&Queen_Marys_Song_header,
+//&Wisdom_Of_The_World_header,
+//&Tombstone_BGM_header,
+//&Game_Over_BGM_header,
+//&Big_Victory_BGM_header,
+//&Airplane_BGM_header,
+//&Level_Up_BGM_header,
+//&Recovery_BGM_header,
+//&Fanfare_BGM_header,
+//&Live_House_BGM_header,
+//&All_That_I_Needed_Was_You_header,
+
+//&Melody_1_header,
+//&Melody_2_header,
+//&Melody_3_header,
+//&Melody_4_header,
+//&Melody_5_header,
+//&Melody_6_header,
+//&Melody_7_header,
+//&Melody_8_header,
+
+//&VS_Giegue_BGM_header,
+//&Ending_JP_BGM_header,
+//&Zoo_BGM_header,
+//&Phone_BGM_header,
+//&Youngtown_BGM_header,
+//&Cave_Of_The_Tail_BGM_header,
+];
 
 //     .ifndef VER_JP
 //     .byte 0
@@ -2497,13 +2810,14 @@ void B28_0aec() @safe {
 // .addr mus_fallin_love_triangle
 // .addr mus_fallin_love_noise
 
-// Mother_Earth_header:
-// .byte $00   ; Transpose
-// .byte NLT_28-Tempo_Lengths   ; Note length table offset
-// .addr mus_mother_earth_pulse1 ; Pulse1 phrase pointers
-// .addr mus_mother_earth_pulse2 ; Pulse2 phrase pointers
-// .addr mus_mother_earth_triangle ; Triangle phrase pointers
-// .addr mus_mother_earth_noise ; Noise phrase pointers
+shared MusHeader Mother_Earth_header = {
+    0,
+    &NLT_28,
+    &mus_mother_earth_pulse1,
+    &mus_mother_earth_pulse2,
+    &mus_mother_earth_triangle,
+    &mus_mother_earth_noise,
+};
 
 // Tank_BGM_header:
 // .byte $00
@@ -2731,361 +3045,42 @@ void B28_0aec() @safe {
 // .addr B29_1590
 // .addr B29_1596
 
-//UNKNOWN_1C9302:
-//	.WORD UNKNOWN_1C9347
-//	.WORD UNKNOWN_1C935A
-//UNKNOWN_1C9306:
-//	.WORD UNKNOWN_1C9357
-//	.WORD 0
+shared MusPattern[] mus_mother_earth_pulse2 = [
+{pointer: &mus_mother_earth_pulse2_t1},
+{f: -1},
+{f: 0},
+];
 
-//UNKNOWN_1C930A:
-//	.WORD UNKNOWN_1C934D
-//	.WORD UNKNOWN_1C9365
-//UNKNOWN_1C930E:
-//	.WORD UNKNOWN_1C9362
-//	.WORD 0
+shared MusPattern[] mus_mother_earth_pulse1 = [
+{pointer: &mus_mother_earth_pulse1_t1},
+{f: -1},
+{f: 0},
+];
 
-//UNKNOWN_1C9312:
-//	.WORD UNKNOWN_1C934D
-//	.WORD UNKNOWN_1C9370
-//UNKNOWN_1C9316:
-//	.WORD UNKNOWN_1C936D
-//	.WORD 0
+shared MusPattern[] mus_mother_earth_triangle = [
+{pointer: &mus_mother_earth_triangle_t1},
+{f: -1},
+{f: 0},
+];
 
-//UNKNOWN_1C931A:
-//	.WORD UNKNOWN_1C9347
-//	.WORD UNKNOWN_1C937C
-//UNKNOWN_1C931E:
-//	.WORD UNKNOWN_1C9379
-//	.WORD 0
+shared MusPattern[] mus_mother_earth_noise = [
+{pointer: &mus_mother_earth_noise_t1},
+{f: -1},
+{f: 0},
+];
 
-//UNKNOWN_1C9322:
-//	.WORD UNKNOWN_1C934D
-//	.WORD UNKNOWN_1C9388
-//UNKNOWN_1C9326:
-//	.WORD UNKNOWN_1C9385
-//	.WORD 0
+shared ubyte[] mus_mother_earth_pulse2_t1 = [
+0x9F, 0xA7, 0xB3, 0xC8, 0xB4, 0x02, 0xFF, 0xC2, 0xB4, 0x4A, 0x50, 0xB6, 0x5A, 0xB2, 0x5E, 0xB4, 0x5A, 0xFF, 0x9F, 0xA7, 0xF4, 0xC2, 0xB3, 0x4A, 0xB2, 0x4C, 0x50, 0xB4, 0x50, 0xB3, 0x46, 0xB2, 0x4A, 0x4C, 0xB4, 0x4A, 0x42, 0x42, 0xB3, 0x40, 0x3C, 0x38, 0x34, 0xFF, 0xC2, 0xB3, 0x4A, 0xB2, 0x4C, 0x50, 0xB3, 0x50, 0x54, 0xB3, 0x46, 0xB2, 0x4A, 0x4C, 0xB4, 0x4A, 0xB3, 0x42, 0xB2, 0x46, 0x3C, 0xB2, 0x40, 0x42, 0x46, 0x4A, 0xB3, 0x40, 0x3C, 0x38, 0x34, 0xFF, 0x9F, 0xA1, 0xB4, 0xC2, 0xB4, 0x32, 0xB3, 0x2E, 0x38, 0xFF, 0x00
+];
 
-//UNKNOWN_1C932A:
-//	.WORD UNKNOWN_1C934D
-//	.WORD UNKNOWN_1C9391
-//UNKNOWN_1C932E:
-//	.WORD UNKNOWN_1C938E
-//	.WORD 0
+shared ubyte[] mus_mother_earth_pulse1_t1 = [
+0x9F, 0xB4, 0xF1, 0xC4, 0xB2, 0x02, 0x62, 0xB3, 0x68, 0xB2, 0x02, 0x62, 0xB3, 0x68, 0xB2, 0x02, 0x62, 0xB3, 0x68, 0xB2, 0x02, 0x5A, 0xB3, 0x62, 0xFF, 0xC2, 0xB2, 0x02, 0x4A, 0xB3, 0x50, 0xB2, 0x02, 0x4A, 0xB3, 0x50, 0xB2, 0x02, 0x4A, 0xB3, 0x50, 0xB2, 0x02, 0x4A, 0xB3, 0x50, 0xB2, 0x02, 0x42, 0xB3, 0x4C, 0xB2, 0x02, 0x46, 0xB3, 0x4E, 0xB2, 0x02, 0xB1, 0x46, 0xB5, 0x50, 0xB1, 0x46, 0xB5, 0x50, 0xB1, 0x46, 0xB5, 0x50, 0xB1, 0x46, 0x50, 0xFF, 0x9F, 0xB2, 0xF1, 0xC2, 0xB2, 0x4A, 0x38, 0x50, 0x38, 0x46, 0x38, 0x50, 0x38, 0x46, 0x38, 0x50, 0x38, 0x42, 0x38, 0x50, 0x38, 0x42, 0x3C, 0x4C, 0x3C, 0x46, 0x3C, 0x4E, 0x3C, 0x40, 0x50, 0x3C, 0x50, 0x38, 0x50, 0x34, 0x50, 0xFF, 0xC2, 0x4A, 0x42, 0x4A, 0x50, 0x5A, 0x50, 0x46, 0x4C, 0xFF, 0x00
+];
 
-//UNKNOWN_1C9332:
-//	.WORD UNKNOWN_1C9347
-//	.WORD UNKNOWN_1C939E
-//UNKNOWN_1C9336:
-//	.WORD UNKNOWN_1C939B
-//	.WORD 0
+shared ubyte[] mus_mother_earth_triangle_t1 = [
+0x9F, 0xA0, 0x00, 0xC2, 0xB4, 0x5A, 0x58, 0x56, 0x54, 0xFF, 0xC2, 0x42, 0x40, 0x3E, 0x3C, 0xFF, 0xC2, 0xB4, 0x42, 0x40, 0x3E, 0x3C, 0x34, 0x36, 0xB3, 0x38, 0x34, 0x32, 0x2E, 0xFF, 0xC2, 0xB4, 0x2A, 0x28, 0x26, 0x24, 0x34, 0x36, 0xB3, 0x38, 0x34, 0x32, 0x2E, 0xFF, 0xC2, 0xB4, 0x2A, 0x26, 0xFF, 0x00
+];
 
-//UNKNOWN_1C933A:
-//	.WORD UNKNOWN_1C934D
-//	.WORD UNKNOWN_1C93AA
-//UNKNOWN_1C933E:
-//	.WORD UNKNOWN_1C93A7
-//	.WORD 0
-
-//UNKNOWN_1C9342:
-//	.BYTE $BB, $62, $B6, $02, $00
-//UNKNOWN_1C9347:
-//	.BYTE $9F, $0D, $F1, $B8, $02, $00
-//UNKNOWN_1C934D:
-//	.BYTE $9F, $29, $F3, $B8, $02, $00
-//UNKNOWN_1C9353:
-//	.BYTE $9F, $A0, $00, $00
-//UNKNOWN_1C9357:
-//	.BYTE $9F, $12, $30
-//UNKNOWN_1C935A:
-//	.BYTE $B2, $38, $3C, $40, $46, $B4, $3C, $00
-//UNKNOWN_1C9362:
-//	.BYTE $9F, $27, $B6
-//UNKNOWN_1C9365:
-//	.BYTE $B2, $50, $4E, $4A, $40, $B4, $46, $00
-//UNKNOWN_1C936D:
-//	.BYTE $9F, $47, $F5
-//UNKNOWN_1C9370:
-//	.BYTE $B2, $4A, $4E, $50, $B3, $46, $B6, $38, $00
-//UNKNOWN_1C9379:
-//	.BYTE $9F, $10, $F5
-//UNKNOWN_1C937C:
-//	.BYTE $B2, $42, $40, $38, $B4, $2E, $B2, $02, $00
-//UNKNOWN_1C9385:
-//	.BYTE $9F, $87, $F5
-//UNKNOWN_1C9388:
-//	.BYTE $B3, $32, $36, $38, $42, $00
-//UNKNOWN_1C938E:
-//	.BYTE $9F, $A7, $B4
-//UNKNOWN_1C9391:
-//	.BYTE $B2, $40, $42, $46, $40, $3C, $40, $42, $3C, $00
-//UNKNOWN_1C939B:
-//	.BYTE $9F, $B8, $B1
-//UNKNOWN_1C939E:
-//	.BYTE $B2, $32, $42, $40, $2E, $B3, $3C, $36, $00
-//UNKNOWN_1C93A7:
-//	.BYTE $9F, $A7, $F5
-//UNKNOWN_1C93AA:
-//	.BYTE $B3, $38, $B2, $2E, $3C, $B4, $38, $00
-//UNKNOWN_1C93B2:
-//	.WORD UNKNOWN_1C963B
-//	.WORD UNKNOWN_1C93DE
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C93B2 + 2
-//UNKNOWN_1C93BA:
-//	.WORD UNKNOWN_1C964D
-//	.WORD UNKNOWN_1C94B4
-//	.WORD UNKNOWN_1C94F7
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C93BA + 2
-//UNKNOWN_1C93C4:
-//	.WORD UNKNOWN_1C965F
-//	.WORD UNKNOWN_1C9590
-//	.WORD UNKNOWN_1C95A2
-//	.WORD UNKNOWN_1C9590
-//	.WORD UNKNOWN_1C9590
-//	.WORD UNKNOWN_1C95A2
-//	.WORD UNKNOWN_1C95D3
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C93C4 + 2
-//UNKNOWN_1C93D6:
-//	.WORD UNKNOWN_1C9671
-//	.WORD UNKNOWN_1C95EC
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C93D6 + 2
-//UNKNOWN_1C93DE:
-//	.BYTE $9F, $13, $31, $9E, $00, $C2, $B7, $02, $B0, $38, $B2, $02, $B0, $38, $B7, $02, $B2, $02, $B0, $38, $B7, $02, $B6, $02, $FF, $B7, $02, $B4, $2A, $B0, $02, $B6, $02, $B4, $02, $02, $B7, $02, $B0, $3E, $B2, $02, $B0, $3E, $B7, $02, $B2, $02, $B0, $42, $B7, $02, $B2, $02, $B7, $02, $B0, $42, $B2, $02, $B4, $3C, $02, $C2, $B1, $34, $02, $42, $02, $3C, $02, $42, $02, $38, $02, $B7, $3C, $B0, $3C, $B7, $02, $B0, $30, $B7, $02, $B0, $3A, $B1, $34, $02, $34, $02, $34, $02, $34, $02, $34, $02, $B7, $02, $B3, $24, $B0, $02, $FF, $B7, $02, $B0, $22, $B2, $02, $22, $22, $B0, $22, $B7, $02, $B7, $02, $B0, $2E, $B2, $02, $B7, $02, $B0, $2A, $B1, $24, $02, $24, $02, $24, $02, $02, $02, $B7, $24, $B0, $24, $B2, $02, $B3, $24, $B7, $02, $B2, $26, $B0, $38, $B1, $32, $02, $3E, $02, $2E, $02, $38, $02, $B7, $34, $B0, $38, $B2, $02, $B7, $02, $B0, $2E, $B2, $02, $B1, $30, $02, $B2, $02, $B1, $2E, $02, $B7, $02, $B0, $32, $B3, $02, $C2, $B8, $3C, $3C, $3C, $BA, $02, $B2, $3C, $02, $FF, $C2, $B8, $3C, $BB, $02, $B8, $3C, $BB, $02, $B8, $3C, $FF, $B2, $3C, $02, $3C, $02, $00
-//UNKNOWN_1C94B4:
-//	.BYTE $9F, $15, $31, $C2, $B7, $02, $B0, $30, $B2, $02, $B0, $30, $B7, $02, $B2, $02, $B0, $30, $B7, $02, $B6, $02, $FF, $B7, $02, $B4, $22, $B0, $02, $B6, $02, $B4, $02, $02, $B7, $02, $B0, $2A, $B2, $02, $B0, $2A, $B7, $02, $B2, $02, $B0, $20, $B7, $02, $B2, $02, $B7, $02, $B0, $22, $B2, $02, $B4, $30, $B6, $02, $B7, $02, $B0, $3A, $00
-//UNKNOWN_1C94F7:
-//	.BYTE $C2, $B1, $3C, $02, $42, $02, $46, $02, $42, $02, $48, $02, $B7, $46, $B0, $42, $B7, $02, $B0, $38, $B7, $02, $B0, $3A, $B1, $3C, $02, $42, $02, $46, $02, $42, $02, $3C, $02, $B7, $02, $B3, $30, $B0, $02, $FF, $B7, $02, $B0, $34, $B2, $02, $34, $2E, $B0, $34, $B7, $02, $B7, $2E, $B0, $3A, $B2, $02, $B7, $02, $B0, $2A, $B1, $2E, $02, $34, $02, $34, $02, $2E, $02, $B7, $2A, $B0, $2E, $B2, $02, $B3, $30, $B7, $02, $B0, $30, $B7, $32, $B0, $38, $B1, $42, $02, $3E, $02, $3A, $02, $38, $02, $B7, $34, $B0, $38, $B2, $02, $B7, $02, $B0, $3C, $B2, $02, $B1, $3C, $02, $B2, $02, $B1, $3E, $02, $B7, $02, $B0, $42, $B3, $02, $C2, $B8, $30, $30, $30, $BA, $02, $B2, $30, $02, $FF, $C2, $B8, $30, $BB, $02, $B8, $30, $BB, $02, $B8, $30, $FF, $B2, $30, $02, $30, $02, $00
-//UNKNOWN_1C9590:
-//	.BYTE $9F, $00, $00, $C2, $B7, $34, $B0, $34, $B2, $30, $2E, $2C, $2A, $28, $26, $24, $FF, $00
-//UNKNOWN_1C95A2:
-//	.BYTE $B7, $26, $B0, $26, $B2, $22, $20, $2C, $2E, $20, $2A, $22, $B7, $1C, $B0, $1C, $B2, $22, $24, $2A, $30, $2E, $2A, $24, $2A, $32, $38, $B7, $32, $B0, $32, $B2, $26, $3A, $38, $36, $B7, $34, $B0, $34, $B2, $30, $2E, $2C, $2A, $2E, $30, $32, $00
-//UNKNOWN_1C95D3:
-//	.BYTE $C2, $B8, $34, $34, $34, $BA, $02, $B2, $34, $02, $FF, $C2, $B8, $34, $34, $34, $BA, $02, $FF, $B2, $34, $02, $34, $02, $00
-//UNKNOWN_1C95EC:
-//	.BYTE $DC, $B7, $04, $B0, $04, $B2, $07, $B7, $04, $B0, $04, $B2, $07, $FF, $C2, $B8, $07, $07, $07, $BA, $01, $B2, $07, $01, $FF, $C2, $B8, $07, $BB, $02, $B8, $07, $BB, $02, $B8, $07, $FF, $B2, $07, $01, $07, $01, $00
-//UNKNOWN_1C9617:
-//	.WORD UNKNOWN_1C963B
-//	.WORD UNKNOWN_1C9674
-//	.WORD UNKNOWN_1C96B6
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9617 + 2
-//UNKNOWN_1C9621:
-//	.WORD UNKNOWN_1C964D
-//	.WORD UNKNOWN_1C9695
-//	.WORD UNKNOWN_1C975A
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9621 + 2
-//UNKNOWN_1C962B:
-//	.WORD UNKNOWN_1C965F
-//	.WORD UNKNOWN_1C97C8
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C962B + 2
-//UNKNOWN_1C9633:
-//	.WORD UNKNOWN_1C9671
-//	.WORD UNKNOWN_1C9823
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9633 + 2
-//UNKNOWN_1C963B:
-//	.BYTE $9F, $38, $31, $B0, $16, $20, $2A, $2E, $38, $42, $46, $50, $9F, $23, $3A, $B3, $5A, $00
-//UNKNOWN_1C964D:
-//	.BYTE $9F, $38, $31, $B0, $12, $16, $20, $2A, $2E, $38, $42, $46, $9F, $23, $3A, $B3, $50, $00
-//UNKNOWN_1C965F:
-//	.BYTE $9F, $0A, $00, $B0, $20, $2A, $2E, $38, $42, $46, $50, $5A, $9F, $A0, $00, $B3, $5E, $00
-//UNKNOWN_1C9671:
-//	.BYTE $B4, $01, $00
-//UNKNOWN_1C9674:
-//	.BYTE $9F, $04, $F3, $B8, $50, $50, $50, $9F, $0B, $F3, $50, $50, $50, $9F, $0C, $F3, $50, $50, $9F, $0D, $F3, $50, $50, $9F, $0E, $F3, $50, $50, $B0, $02, $BB, $02, $00
-//UNKNOWN_1C9695:
-//	.BYTE $9F, $04, $F6, $B8, $5A, $5A, $5A, $9F, $0B, $F6, $5A, $5A, $5A, $9F, $0C, $F6, $5A, $5A, $9F, $0D, $F6, $5A, $5A, $9F, $0E, $F6, $5A, $5A, $B0, $02, $BB, $02, $00
-//UNKNOWN_1C96B6:
-//	.BYTE $9F, $A9, $F3, $B8, $02, $B0, $42, $38, $3A, $48, $B6, $44, $B0, $4E, $4E, $02, $02, $B6, $02, $B0, $42, $38, $3A, $48, $B6, $44, $B0, $52, $52, $02, $02, $B2, $02, $B8, $02, $02, $BB, $02, $9F, $A8, $F3, $B4, $20, $B3, $26, $22, $B4, $20, $B3, $2C, $26, $9F, $29, $F2, $C4, $B0, $30, $38, $2A, $30, $FF, $C4, $32, $3A, $2C, $32, $FF, $C4, $34, $24, $2E, $34, $FF, $C2, $36, $3E, $30, $36, $FF, $C2, $38, $40, $32, $38, $FF, $9F, $A8, $F3, $C2, $B0, $02, $02, $20, $02, $02, $20, $02, $02, $B3, $20, $B0, $02, $02, $22, $02, $02, $22, $02, $02, $B3, $22, $FF, $BB, $02, $9F, $A1, $B4, $C2, $B0, $34, $3A, $42, $50, $B2, $48, $42, $3A, $B1, $42, $3A, $48, $3A, $3E, $34, $2E, $34, $B0, $4C, $52, $5A, $68, $B2, $60, $5A, $52, $B0, $5A, $52, $48, $42, $3A, $42, $48, $52, $56, $4C, $46, $3E, $34, $3E, $46, $4C, $FF, $00
-//UNKNOWN_1C975A:
-//	.BYTE $9F, $A8, $F4, $B0, $42, $38, $3A, $48, $B6, $44, $B0, $4E, $4E, $02, $02, $B6, $02, $B0, $42, $38, $3A, $48, $B6, $44, $B0, $52, $52, $02, $02, $B6, $02, $B4, $2A, $B3, $30, $2C, $B4, $2A, $B3, $36, $30, $9F, $A9, $F3, $C4, $B0, $42, $30, $38, $42, $FF, $C4, $44, $32, $3A, $44, $FF, $C4, $46, $34, $3C, $46, $FF, $C2, $48, $36, $3E, $48, $FF, $C2, $4A, $38, $40, $4A, $FF, $9F, $A8, $F4, $C2, $B0, $02, $02, $2A, $02, $02, $2A, $02, $02, $B3, $2A, $B0, $02, $02, $2C, $02, $02, $2C, $02, $02, $B3, $2C, $FF, $C4, $B4, $4C, $B3, $48, $46, $FF, $00
-//UNKNOWN_1C97C8:
-//	.BYTE $9F, $00, $00, $C5, $B1, $2A, $20, $26, $20, $B0, $2A, $2A, $B1, $20, $26, $20, $2A, $20, $26, $20, $B0, $2A, $2A, $B1, $1A, $1C, $20, $FF, $2A, $2C, $2E, $30, $32, $30, $2E, $2C, $2C, $2E, $30, $32, $34, $32, $30, $2E, $2E, $30, $32, $34, $36, $34, $32, $30, $30, $32, $34, $36, $32, $34, $36, $38, $9F, $0F, $00, $E0, $B0, $2A, $2A, $FF, $9F, $00, $00, $C4, $B1, $34, $32, $30, $2E, $2C, $2A, $28, $26, $3A, $38, $36, $34, $3E, $3C, $3A, $38, $FF, $00
-//UNKNOWN_1C9823:
-//	.BYTE $DC, $B0, $04, $04, $04, $04, $07, $04, $04, $04, $FF, $C4, $04, $04, $07, $04, $04, $07, $04, $04, $07, $04, $04, $04, $07, $07, $07, $07, $FF, $E0, $04, $04, $07, $04, $FF, $00
-//UNKNOWN_1C9847:
-//	.WORD UNKNOWN_1C963B
-//	.WORD UNKNOWN_1C9871
-//	.WORD UNKNOWN_1C98A9
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9847 + 2
-//UNKNOWN_1C9851:
-//	.WORD UNKNOWN_1C964D
-//	.WORD UNKNOWN_1C98BD
-//	.WORD UNKNOWN_1C993E
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9851 + 2
-//UNKNOWN_1C985B:
-//	.WORD UNKNOWN_1C965F
-//	.WORD UNKNOWN_1C9988
-//	.WORD UNKNOWN_1C999C + 11
-//	.WORD UNKNOWN_1C999C
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C985B + 2
-//UNKNOWN_1C9867:
-//	.WORD UNKNOWN_1C9671
-//	.WORD UNKNOWN_1C99D4
-//	.WORD UNKNOWN_1C99D4
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9867 + 2
-//UNKNOWN_1C9871:
-//	.BYTE $9F, $04, $34, $9E, $0C, $B3, $02, $C5, $B1, $54, $FF, $02, $02, $02, $C5, $4C, $FF, $02, $02, $02, $54, $02, $02, $02, $54, $B5, $02, $9F, $44, $34, $B1, $02, $B6, $62, $B1, $02, $9F, $04, $34, $B4, $02, $02, $B1, $54, $54, $54, $52, $54, $54, $52, $54, $C5, $B4, $02, $FF, $00
-//UNKNOWN_1C98A9:
-//	.BYTE $E0, $B1, $16, $FF, $D0, $20, $FF, $D0, $16, $FF, $C8, $24, $FF, $C8, $20, $FF, $D0, $16, $FF, $00
-//UNKNOWN_1C98BD:
-//	.BYTE $9F, $A4, $34, $B1, $02, $4C, $4E, $54, $C5, $5E, $FF, $58, $54, $58, $C5, $54, $FF, $58, $54, $58, $C2, $5E, $58, $54, $58, $FF, $9F, $44, $34, $02, $B6, $58, $B1, $02, $C2, $9F, $A4, $34, $B1, $68, $02, $9F, $44, $34, $B2, $64, $FF, $9F, $A4, $34, $B1, $02, $68, $9F, $44, $34, $B2, $64, $9F, $A4, $34, $68, $9F, $44, $34, $64, $9F, $04, $34, $B1, $5E, $5E, $5E, $5C, $5E, $5E, $5C, $5E, $02, $64, $5E, $5A, $54, $50, $4C, $46, $9F, $44, $34, $B2, $50, $50, $B1, $50, $9F, $04, $34, $B1, $50, $4C, $46, $02, $46, $42, $3C, $3A, $38, $34, $2E, $B1, $02, $50, $9F, $A4, $34, $54, $5E, $5A, $54, $50, $4C, $46, $02, $02, $B3, $3C, $B1, $02, $00
-//UNKNOWN_1C993E:
-//	.BYTE $C2, $B1, $24, $24, $28, $24, $24, $24, $28, $24, $24, $24, $28, $24, $2A, $24, $28, $24, $FF, $C2, $2E, $2E, $32, $2E, $FF, $2E, $2E, $32, $2E, $34, $2E, $32, $2E, $C2, $24, $24, $28, $24, $FF, $2A, $24, $28, $24, $24, $24, $28, $24, $C2, $32, $32, $36, $32, $FF, $C2, $2E, $2E, $32, $2E, $FF, $C2, $24, $24, $28, $24, $FF, $2A, $24, $28, $24, $24, $24, $28, $24, $00
-//UNKNOWN_1C9988:
-//	.BYTE $9F, $00, $00, $B3, $02, $2E, $02, $38, $02, $2E, $2E, $B1, $02, $C7, $3C, $FF, $9F, $15, $00, $00
-//UNKNOWN_1C999C:
-//	.BYTE $C4, $B1, $2E, $2E, $36, $36, $3C, $3C, $40, $3C, $FF, $C2, $B1, $38, $38, $40, $40, $46, $46, $4A, $46, $FF, $C2, $2E, $2E, $36, $36, $3C, $3C, $40, $3C, $FF, $3C, $3C, $44, $44, $4A, $4A, $4E, $4A, $38, $38, $40, $40, $46, $46, $4A, $46, $C8, $2E, $FF, $02, $C7, $3C, $FF, $00
-//UNKNOWN_1C99D4:
-//	.BYTE $B3, $01, $B4, $44, $44, $B3, $44, $44, $B1, $01, $C7, $84, $FF, $C7, $44, $04, $84, $84, $44, $04, $84, $04, $FF, $D0, $B0, $84, $FF, $CB, $B1, $44, $04, $84, $84, $44, $04, $84, $04, $FF, $44, $04, $84, $44, $C8, $B0, $84, $FF, $00
-//UNKNOWN_1C9A03:
-//	.WORD UNKNOWN_1C9A0B
-//	.WORD 0
-//UNKNOWN_1C9A07:
-//	.WORD UNKNOWN_1C9A1A
-//UNKNOWN_1C9A09:
-//	.WORD UNKNOWN_1C9A29
-//UNKNOWN_1C9A0B:
-//	.BYTE $9F, $A7, $F3, $B0, $1C, $26, $2E, $34, $3E, $46, $4C, $56, $B4, $54, $00
-//UNKNOWN_1C9A1A:
-//	.BYTE $9F, $A7, $F3, $B0, $0E, $16, $1C, $26, $2E, $34, $3E, $46, $B4, $34, $00
-//UNKNOWN_1C9A29:
-//	.BYTE $9F, $A0, $00, $B0, $2E, $34, $3E, $46, $4C, $56, $5E, $64, $B4, $5A, $00
-//UNKNOWN_1C9A38:
-//	.WORD UNKNOWN_1C9A58
-//	.WORD UNKNOWN_1C9A74
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9A38 + 2
-//UNKNOWN_1C9A40:
-//	.WORD UNKNOWN_1C9A61
-//	.WORD UNKNOWN_1C9AE6
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9A40 + 2
-//UNKNOWN_1C9A48:
-//	.WORD UNKNOWN_1C9A6A
-//	.WORD UNKNOWN_1C9B93
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9A48 + 2
-//UNKNOWN_1C9A50:
-//	.WORD UNKNOWN_1C9A70
-//	.WORD UNKNOWN_1C9BAC
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9A50 + 2
-//UNKNOWN_1C9A58:
-//	.BYTE $9F, $29, $73, $B2, $02, $42, $46, $48, $00
-//UNKNOWN_1C9A61:
-//	.BYTE $9F, $1B, $76, $B2, $02, $4A, $4C, $4E, $00
-//UNKNOWN_1C9A6A:
-//	.BYTE $9F, $00, $00, $B4, $02, $00
-//UNKNOWN_1C9A70:
-//	.BYTE $B4, $01, $00, $00
-//UNKNOWN_1C9A74:
-//	.BYTE $C2, $B3, $50, $B2, $02, $B1, $50, $02, $4C, $02, $4A, $02, $B2, $02, $02, $FF, $B4, $02, $02, $46, $B2, $02, $38, $3C, $3E, $C4, $B4, $02, $FF, $B2, $02, $B3, $46, $B2, $46, $B1, $46, $02, $42, $02, $40, $02, $3C, $02, $B4, $4A, $B2, $02, $42, $46, $48, $C3, $B1, $02, $02, $5A, $5A, $5A, $02, $58, $58, $58, $02, $54, $54, $54, $02, $50, $02, $FF, $B6, $40, $B2, $3C, $B4, $46, $C2, $B1, $02, $02, $46, $46, $46, $02, $42, $42, $42, $02, $40, $40, $40, $02, $3C, $02, $FF, $B2, $02, $B3, $40, $B2, $42, $46, $50, $4C, $50, $B2, $50, $50, $02, $02, $32, $B6, $02, $00
-//UNKNOWN_1C9AE6:
-//	.BYTE $C6, $B0, $50, $4A, $FF, $B1, $5A, $02, $54, $02, $50, $02, $B2, $02, $4A, $C6, $B0, $50, $4A, $FF, $B1, $5A, $02, $54, $02, $50, $02, $B2, $02, $4A, $B1, $02, $02, $72, $6C, $68, $62, $5E, $5A, $54, $50, $4A, $48, $46, $42, $3C, $38, $C8, $B0, $50, $40, $FF, $B2, $02, $40, $42, $44, $C2, $B1, $3E, $40, $50, $3E, $40, $50, $3E, $40, $4C, $3E, $40, $4C, $4A, $46, $40, $38, $FF, $B2, $02, $C4, $B0, $58, $46, $FF, $B2, $58, $B1, $58, $02, $54, $02, $50, $02, $4C, $02, $C8, $B0, $4A, $38, $FF, $B2, $02, $4A, $4C, $4E, $C3, $B1, $02, $02, $62, $62, $62, $02, $5E, $5E, $5E, $02, $5A, $5A, $5A, $02, $58, $02, $FF, $B6, $50, $B2, $4C, $C8, $B0, $46, $40, $FF, $C2, $B1, $02, $02, $58, $58, $58, $02, $54, $54, $54, $02, $50, $50, $50, $02, $4C, $02, $FF, $B2, $02, $B3, $46, $B2, $4A, $4C, $58, $54, $58, $B2, $5A, $5A, $B1, $54, $50, $B2, $4A, $42, $B6, $02, $00
-//UNKNOWN_1C9B93:
-//	.BYTE $9F, $00, $00, $C6, $B5, $2A, $32, $B2, $20, $FF, $C8, $B5, $20, $28, $B2, $2E, $FF, $C2, $B5, $2A, $32, $B2, $20, $FF, $00
-//UNKNOWN_1C9BAC:
-//	.BYTE $E0, $B2, $41, $B1, $04, $04, $B2, $41, $04, $FF, $00
-//UNKNOWN_1C9BB7:
-//	.WORD UNKNOWN_1C9BDB
-//	.WORD UNKNOWN_1C9C54
-//	.WORD UNKNOWN_1C9C98
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9BB7 + 2
-//UNKNOWN_1C9BC1:
-//	.WORD UNKNOWN_1C9BFC
-//	.WORD UNKNOWN_1C9D3F
-//	.WORD UNKNOWN_1C9D76
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9BC1 + 2
-//UNKNOWN_1C9BCB:
-//	.WORD UNKNOWN_1C9C1D
-//	.WORD UNKNOWN_1C9DAE
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9BCB + 2
-//UNKNOWN_1C9BD3:
-//	.WORD UNKNOWN_1C9C35
-//	.WORD UNKNOWN_1C9CE8
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9BD3 + 2
-//UNKNOWN_1C9BDB:
-//	.BYTE $9F, $A9, $B2, $B1, $38, $42, $4A, $B2, $3C, $B2, $40, $B1, $40, $40, $B2, $40, $B3, $38, $B1, $02, $B1, $38, $42, $4A, $B2, $3C, $B2, $40, $B4, $40, $B1, $02, $00
-//UNKNOWN_1C9BFC:
-//	.BYTE $9F, $B2, $B1, $B1, $5A, $62, $68, $B2, $66, $B2, $68, $B1, $68, $68, $B2, $5E, $B3, $62, $B1, $02, $B1, $5A, $62, $68, $B2, $66, $B2, $68, $B4, $68, $B1, $02, $00
-//UNKNOWN_1C9C1D:
-//	.BYTE $9F, $A0, $00, $B5, $42, $B3, $46, $B1, $02, $B5, $38, $B3, $42, $B1, $02, $B5, $42, $B3, $46, $B4, $38, $B1, $02, $00
-//UNKNOWN_1C9C35:
-//	.BYTE $C2, $B1, $44, $04, $04, $44, $01, $04, $01, $04, $FF, $44, $04, $04, $44, $01, $44, $01, $44, $01, $04, $04, $01, $B0, $81, $81, $B1, $41, $81, $41, $00
-//UNKNOWN_1C9C54:
-//	.BYTE $9F, $B2, $B1, $C2, $B1, $02, $40, $46, $50, $02, $3C, $46, $4E, $02, $38, $40, $4A, $02, $38, $40, $46, $42, $4A, $50, $42, $40, $46, $50, $40, $3E, $46, $4C, $46, $3C, $46, $36, $46, $FF, $02, $32, $38, $40, $02, $30, $38, $40, $02, $2E, $38, $40, $02, $2C, $32, $38, $9F, $A9, $B2, $4A, $46, $42, $46, $46, $46, $42, $46, $B4, $40, $00
-//UNKNOWN_1C9C98:
-//	.BYTE $9F, $B2, $F2, $B1, $36, $1E, $28, $B5, $36, $B2, $1E, $B1, $38, $20, $2A, $B5, $38, $B2, $20, $B1, $36, $1E, $28, $2E, $36, $16, $24, $2E, $28, $16, $20, $28, $2E, $20, $28, $2E, $B1, $4A, $42, $38, $42, $46, $40, $B2, $38, $B1, $42, $38, $32, $38, $46, $40, $B2, $38, $B1, $4A, $42, $38, $42, $46, $40, $B2, $38, $9F, $A9, $B1, $B1, $4A, $4A, $4A, $4A, $50, $B2, $42, $B4, $40, $B1, $02, $00, $00
-//UNKNOWN_1C9CE8:
-//	.BYTE $C8, $B1, $41, $04, $81, $B0, $04, $41, $B1, $41, $44, $81, $B0, $04, $04, $FF, $C3, $B1, $44, $04, $84, $44, $44, $04, $84, $04, $FF, $44, $04, $84, $44, $B0, $81, $81, $B1, $81, $81, $81, $C2, $B1, $44, $04, $84, $44, $01, $84, $84, $01, $FF, $44, $04, $84, $44, $44, $04, $84, $04, $44, $04, $84, $44, $44, $81, $81, $07, $C4, $44, $04, $84, $44, $44, $04, $84, $04, $FF, $44, $04, $84, $44, $44, $04, $B0, $81, $81, $B1, $81, $00
-//UNKNOWN_1C9D3F:
-//	.BYTE $9F, $A7, $B3, $C2, $B1, $40, $40, $46, $46, $B2, $54, $B1, $4E, $B4, $50, $B1, $02, $B1, $4A, $4A, $50, $50, $B2, $58, $B1, $50, $B3, $46, $B1, $42, $B3, $42, $FF, $B1, $40, $3C, $38, $3C, $B2, $40, $4A, $50, $58, $B3, $62, $C2, $B1, $50, $4E, $4A, $4E, $FF, $B4, $50, $00
-//UNKNOWN_1C9D76:
-//	.BYTE $B1, $46, $46, $46, $02, $B0, $46, $02, $B1, $40, $3C, $B4, $38, $B1, $02, $B1, $46, $46, $46, $02, $54, $50, $4E, $B6, $50, $B1, $02, $4A, $4E, $C3, $50, $4E, $4A, $4E, $FF, $50, $02, $46, $46, $C2, $50, $4E, $4A, $4E, $FF, $C4, $50, $FF, $58, $B2, $50, $B4, $50, $B1, $02, $00
-//UNKNOWN_1C9DAE:
-//	.BYTE $9F, $00, $00, $C2, $B5, $38, $B1, $38, $B5, $36, $B1, $36, $B5, $32, $B1, $32, $B5, $2E, $B1, $2E, $B5, $2A, $B1, $2A, $B5, $28, $B1, $28, $B5, $26, $B1, $26, $B5, $2E, $B1, $2E, $FF, $9F, $1F, $00, $C4, $B1, $32, $FF, $C4, $30, $FF, $C4, $2E, $FF, $C4, $2C, $FF, $C4, $2A, $FF, $C4, $2E, $FF, $9F, $A0, $00, $B4, $20, $9F, $00, $00, $B5, $28, $B3, $28, $B1, $02, $B5, $2A, $B3, $2A, $B1, $02, $B5, $28, $B1, $28, $B5, $2E, $B1, $2E, $C2, $B5, $38, $B1, $38, $FF, $9F, $1F, $00, $C4, $B1, $2A, $FF, $C4, $28, $FF, $C4, $24, $FF, $C4, $28, $FF, $C4, $2A, $FF, $C4, $28, $FF, $C4, $24, $FF, $C4, $2E, $FF, $9F, $A0, $00, $B4, $20, $00
-//UNKNOWN_1C9E2D:
-//	.WORD UNKNOWN_1C9E5D
-//	.WORD UNKNOWN_1C9ED2
-//	.WORD UNKNOWN_1C9ED2
-//	.WORD UNKNOWN_1C9F6B
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9E2D
-//UNKNOWN_1C9E39:
-//	.WORD UNKNOWN_1C9E84
-//	.WORD UNKNOWN_1C9EF7
-//	.WORD UNKNOWN_1C9EF7
-//	.WORD UNKNOWN_1C9FC0
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9E39
-//UNKNOWN_1C9E45:
-//	.WORD UNKNOWN_1C9EB0
-//	.WORD UNKNOWN_1C9F1B
-//	.WORD UNKNOWN_1C9F1B
-//	.WORD $A003
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9E45
-//UNKNOWN_1C9E51:
-//	.WORD UNKNOWN_1C9EBE
-//	.WORD UNKNOWN_1C9F57
-//	.WORD UNKNOWN_1C9F57
-//	.WORD $A054
-//	.WORD $FFFF
-//	.WORD UNKNOWN_1C9E51
-//UNKNOWN_1C9E5D:
-//	.BYTE $9F, $05, $B1, $B1, $5E, $B2, $5E, $B1, $60, $02, $B5, $60, $B1, $5A, $B2, $5A, $B1, $5E, $02, $B5, $5E, $B1, $56, $B2, $56, $B1, $5A, $02, $B5, $5A, $B1, $54, $B2, $54, $B3, $56, $B1, $02, $00
-//UNKNOWN_1C9E84:
-//	.BYTE $9F, $AA, $B1, $B1, $4C, $B2, $4C, $B1, $50, $02, $B5, $50, $B1, $48, $B2, $48, $B1, $4C, $02, $B5, $4C, $B1, $46, $B2, $46, $B1, $48, $02, $B5, $48, $B1, $42, $B2, $42, $B2, $46, $9F, $05, $F1, $B1, $20, $18, $12, $00
-//UNKNOWN_1C9EB0:
-//	.BYTE $9F, $00, $00, $C7, $B2, $02, $38, $FF, $B1, $02, $38, $30, $2A, $00
-//UNKNOWN_1C9EBE:
-//	.BYTE $C7, $B0, $04, $04, $07, $04, $44, $04, $07, $04, $FF, $B1, $01, $81, $B0, $81, $81, $B1, $41, $00
-//UNKNOWN_1C9ED2:
-//	.BYTE $9F, $0A, $B1, $B1, $02, $56, $46, $4C, $02, $50, $3E, $48, $02, $54, $42, $4C, $02, $56, $46, $4C, $02, $50, $3E, $48, $02, $50, $42, $48, $02, $54, $46, $4E, $02, $56, $46, $50, $00
-//UNKNOWN_1C9EF7:
-//	.BYTE $9F, $A2, $B4, $B1, $46, $3E, $46, $48, $02, $B5, $48, $B1, $4C, $42, $48, $B3, $46, $B1, $02, $48, $4C, $48, $46, $02, $42, $02, $48, $B1, $46, $3C, $42, $3E, $02, $B5, $02, $00
-//UNKNOWN_1C9F1B:
-//	.BYTE $9F, $00, $00, $B7, $26, $B0, $26, $B1, $2E, $26, $B7, $30, $B0, $30, $B1, $38, $30, $B7, $34, $B0, $34, $B1, $3C, $34, $B7, $26, $B0, $26, $B1, $2E, $26, $B7, $30, $B0, $30, $B1, $3E, $26, $B7, $2A, $B0, $2A, $B1, $38, $2A, $B7, $2E, $B0, $2E, $B1, $24, $2E, $B7, $38, $B0, $38, $B1, $2E, $38, $00
-//UNKNOWN_1C9F57:
-//	.BYTE $C4, $B1, $44, $B0, $04, $41, $B1, $84, $44, $44, $B0, $04, $41, $B1, $84, $B0, $04, $04, $FF, $00
-//UNKNOWN_1C9F6B:
-//	.BYTE $9F, $B6, $B1, $C3, $B1, $46, $4C, $56, $46, $48, $56, $48, $4C, $FF, $9F, $0D, $B2, $B1, $56, $54, $54, $4C, $B2, $56, $56, $9F, $B6, $B1, $C2, $B1, $46, $4C, $56, $46, $48, $56, $48, $4C, $FF, $46, $4C, $54, $46, $4C, $54, $46, $4C, $9F, $0D, $B2, $B1, $56, $54, $54, $4C, $B2, $56, $54, $B2, $3E, $38, $3C, $B1, $3C, $3C, $B2, $3E, $34, $B3, $2E, $B1, $3E, $3C, $38, $34, $B2, $3C, $B1, $2A, $2A, $B6, $2E, $B2, $02, $00
-//UNKNOWN_1C9FC0:
-//	.BYTE $C2, $9F, $A2, $F4, $B2, $02, $B1, $3E, $3E, $46, $4C, $4C, $4C, $B2, $56, $54, $50, $54, $B1, $50, $B0, $54, $50, $B6, $4C, $9F, $13, $B3, $B1, $68, $64, $64, $5E, $B2, $68, $64, $FF, $9F, $A7, $F4, $B2, $50, $3E, $42, $B1, $4C, $48, $B2, $46, $3E, $B3, $34, $B1, $50, $4C, $48, $46, $B2, $42, $B1, $3E, $3C, $B6, $3E
-
-//dude :(
+shared ubyte[] mus_mother_earth_noise_t1 = [
+0xB3, 0x01, 0x04, 0x01, 0x04, 0x00
+];

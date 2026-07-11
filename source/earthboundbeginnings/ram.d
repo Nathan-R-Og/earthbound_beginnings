@@ -128,10 +128,12 @@ ubyte[2] UNK_AE;
 ubyte unk_b0; // $b0
 ubyte unk_b1; // $b1
 ubyte unk_b2; // $b2
+shared(ubyte[]*) unk_b2_pointer; // $b2
 ubyte unk_b3; // $b3
 ubyte unk_b4; // $b4
 ubyte UNK_b5; // $b5
 ubyte[2] unk_b6; // $b6 //two byte
+shared(MusPattern[]*) unk_b6_pointer; // $b6 //two byte
 ubyte[2] UNK_b8; // $b7
 ubyte unk_ba; // $ba
 // $bb -> Something to do with music (2 bytes). Interacts with $07FF
@@ -204,7 +206,7 @@ struct SpriteTile {
 }
 
 struct SpritePointerDef {
-	SpriteTile[]* pointer;
+	shared(SpriteTile[])* pointer;
 	ubyte base_tile_id;
 	ubyte p1;
 	ubyte p2;
@@ -225,7 +227,7 @@ struct SpriteObject {
 	Vector2B position;
 	Vector2B velocity;
 	Vector2B[] shake;
-	SpritePointerDef* spriteDef;
+	shared(SpritePointerDef)* spriteDef;
 }
 
 // SpriteObject::count_flags bit masks
@@ -243,12 +245,12 @@ ubyte[0x20] palette_backup;
 ubyte[0x40] irq_pointers;
 
 
-ubyte[] currptr_pulse0; // $780
-ubyte[] currptr_pulse0_blank; // $782
-ubyte[] currptr_pulse1; // $0784
-ubyte[] currptr_pulse1_blank; // $0786
-ubyte[] currptr_triangle; // $0788
-ubyte[] currptr_triangle_blank; // $078A
+ubyte[] currptr_pulse0 = [0,0]; // $780
+ubyte[] currptr_pulse0_blank = [0,0]; // $782
+ubyte[] currptr_pulse1 = [0,0]; // $0784
+ubyte[] currptr_pulse1_blank = [0,0]; // $0786
+ubyte[] currptr_triangle = [0,0]; // $0788
+ubyte[] currptr_triangle_blank = [0,0]; // $078A
 // Noise & DPCM ptr is read straight from MusicHeader
 ubyte[] current_music_blank; // $078E
 
@@ -269,16 +271,24 @@ ubyte[] current_music_blank; // $078E
 //       DPCM uses upper 2 bits of a byte for data to rep. what sample to play (Snare and Kick Drum, don't remember which is which)
 //       Noise uses the rest of the bits
 
-struct Music_Header {
-    ubyte transpose; // Music transpose
-    ubyte[] note_lengths;
-    ubyte[] ME_Pulse1Channel;
-    ubyte[] ME_Pulse2Channel;
-    ubyte[] ME_TriangleChannel;
-    ubyte[] ME_NoiseChannel;
+import std.sumtype; // Required module
+
+// Define a type that can be either an int OR a pointer to an int
+union MusPattern {
+    ubyte[]* pointer;
+    byte f;
 }
 
-// MusicHeader: // $0790
+struct MusHeader {
+    ubyte transpose;
+    ubyte[]* note_lengths;
+    MusPattern[]* pulse1;
+    MusPattern[]* pulse2;
+    MusPattern[]* triangle;
+    MusPattern[]* noise;
+}
+
+shared(MusHeader) MusicHeader; // $0790
 //     ME_Transpose: .res 1 // Music transpose
 //     ME_NoteLengthOffset: .res 1 // $0791 / Music note length table offset
 //     ME_DataPointer: // $0792 / Music channel music data pointer (2 bytes per channel)
@@ -287,24 +297,25 @@ struct Music_Header {
 //     ME_TriangleChannel: .res 2
 //     ME_NoiseChannel: .res 2
 
+
 // ME_Envelopes: // $079a
 ubyte[] ME_Envelopes0 = [0,0,0];
 ubyte[] ME_Envelopes1 = [0,0,0]; // $079D
 
 // //guess
 // ME_CurrentPhrases: // $07a0
-//     ME_CurrentPulse1Phrase: .res 2
-//     ME_CurrentPulse2Phrase: .res 2 // $07a2
-//     ME_CurrentTrianglePhrase: .res 2 // $07a4
-//     ME_CurrentNoisePhrase: .res 2 // $07a6
+shared(MusPattern[]*) ME_CurrentPulse1Phrase;
+shared(MusPattern[]*) ME_CurrentPulse2Phrase; // $07a2
+shared(MusPattern[]*) ME_CurrentTrianglePhrase; // $07a4
+shared(MusPattern[]*) ME_CurrentNoisePhrase; // $07a6
 
 // //guess
 // //if looped, sets head to loop point
 // ME_CurrentPhraseIndex: // $07a8
-//     ME_Pulse1Index: .res 1
-//     ME_Pulse2Index: .res 1 // $07a9
-//     ME_TriangleIndex: .res 1 // $07aa
-//     ME_NoiseIndex: .res 1 // $07ab
+ubyte ME_Pulse1Index;
+ubyte ME_Pulse2Index; // $07a9
+ubyte ME_TriangleIndex; // $07aa
+ubyte ME_NoiseIndex; // $07ab
 
 // // Music Channel variables
 // // RAM reserved for the music engine to do its thing
@@ -316,21 +327,18 @@ ubyte[] ME_Envelopes1 = [0,0,0]; // $079D
 // //   $3 : Noise & DPCM
 
 // // Current Offset in Channel Music Banks
-// MusicChannel_Counter: .res 4 // $07AC / Music channel music data offset (added to $0792[x])
-// MusicChannel_LSOffset: .res 4 // $07B0 / Music channel loop start offset
-// MusicChannel_NoteLengthCounter: .res 4 // $07B4 / Music channel note length counter
-// MusicChannel_NewNoteLength: .res 4 // $07B8 / Music channel new note length
-// MusicChannel_LoopCounter: .res 4 // $07BC / Music channel loop counter
+ubyte[4] MusicChannel_Counter; // $07AC / Music channel music data offset (added to $0792[x])
+ubyte[4] MusicChannel_LSOffset; // $07B0 / Music channel loop start offset
+ubyte[4] MusicChannel_NoteLengthCounter;// $07B4 / Music channel note length counter
+ubyte[4]  MusicChannel_NewNoteLength; // $07B8 / Music channel new note length
+ubyte[4] MusicChannel_LoopCounter; // $07BC / Music channel loop counter
 ubyte[30] UNK_7C0; // $07C0 = Music channel sweep ($4001/$4005), not used for triangle and noise since sweep only exists for pulse
-// unk_7c3 = $07c3
-// unk_7c7 = $07c7
-ubyte unk_7c8; // $07c8
-ubyte unk_7c9; // $07c9
-ubyte unk_7ca; // $07ca
+ubyte[4] unk_7c3; //$07c3
+ubyte[4] unk_7c7;// = $07c7
 ubyte music_id; // $07CC = Current music ID (gets value from $07F5 minus one)
-// unk_7cd = $07cd
+ubyte[4] unk_7cd; // $07cd
 
-// unk_7d1 = $07d1
+ubyte[4] unk_7d1; // $07d1
 // unk_7d5 = $07d5
 // unk_7d6 = $07d6
 // unk_7d9 = $07d9

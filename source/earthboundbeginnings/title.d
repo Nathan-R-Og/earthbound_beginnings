@@ -5,6 +5,7 @@ import earthboundbeginnings.external;
 import earthboundbeginnings.ram;
 import earthboundbeginnings.defs;
 import earthboundbeginnings.sprites;
+import earthboundbeginnings.antipiracy;
 import std.stdio;
 
 /**
@@ -13,42 +14,48 @@ import std.stdio;
 void intro() @safe {
 	BANKSET_H13();
 	Title_Screen();
-	//UNKNOWN_149406:
-	//	JSR ClearSprites
-	//	JSR ClearTilemaps
-	//	JSR UNKNOWN_CE02
-	//	JSR PpuSync
-	//	LDA #$19
-	//	LDX #$8A
-	//	LDY #$A2
-	//	JSR TempUpperBankswitch
-	//	JSR UNKNOWN_EEC8
-	//	LDA #$35
-	//	LDX #$62
-	//	JSR UNKNOWN_CEE8
-	//	LDA #$3B
-	//	LDX #$62
-	//	JSR UNKNOWN_EE9D
-	//UNKNOWN_14942C:
-	//	LDX #$0C
-	//	JSR UNKNOWN_149505
-	//	JSR UNKNOWN_1494D7
-	//	JSR UNKNOWN_14950E
-	//	LDA #$00
-	//	STA $D6
-	//	LDY $82
-	//	LDA ($84),Y
-	//	ASL
-	//	TAX
-	//	LDA UNKNOWN_14944D + 1,X
-	//	PHA
-	//	LDA UNKNOWN_14944D,X
-	//	PHA
-	//	TYA
-	//	LSR
-	//	LSR
-	//	RTS
-	//assert(0, "NYI");
+	//fallthrough
+	return exited_naming_sequence();
+}
+void exited_naming_sequence() @safe {
+    ClearSprites(); //clear sprites
+    ClearTilemaps(); //clear tilemap 0
+    LoadNamingScreen2(); //self explanatory
+    PpuSync();
+    LoadNamingScreen1();
+
+    // jsr ResetScroll
+
+    // ;load graphics
+    // BankswitchCHR_Address naming_screen_chr_table
+    // ;load palettes
+    // LoadPalette_Address naming_screen_palettes
+
+    // B20_142C:
+    // ldx #(6*2)
+    // jsr B20_1505
+    // jsr B20_14d7
+    // jsr B20_150e ;wait for input
+
+    // B20_1437:
+    // lda #0
+    // sta UNK_D6
+
+    // ;get offset
+    // ldy menucursor_pos
+    // lda (UNK_84), y
+    // asl a
+    // tax
+
+    // ;stash pointer into stack
+    // lda unk_pointers+1, x
+    // pha
+    // lda unk_pointers, x
+    // pha
+
+    // tya
+    // lsr a
+    // lsr a
 }
 
 //UNKNOWN_14944D: ;-1 because we're using RTS to jump
@@ -310,7 +317,7 @@ void unknown149516() @safe {
 //	LDA #$30
 //	JSR UNKNOWN_EDFE
 //	JSR UNKNOWN_EEB0
-//	JSR UNKNOWN_FDC0
+//	JSR Refresh_SpriteObjects
 //UNKNOWN_149641:
 //	LDA #$07
 //	STA $0400
@@ -430,7 +437,7 @@ void unknown149779() @safe {
 	//JSR UNKNOWN_EDFE
 	//LDA #$00
 	//STA $EC
-	//JSR UNKNOWN_CE02
+	//JSR LoadNamingScreen2
 	//JMP UNKNOWN_D674
 	//assert(0, "NYI");
 }
@@ -1300,11 +1307,10 @@ void Title_Screen() @safe {
 
 	pad1_forced = 0;
 	OT0_DefaultTransition();
-//	LDA #$19
-//	LDX #$FF
-//	LDY #$9F
-//	JSR TempUpperBankswitch
-//	RTS
+	//mmc1 unfix
+	ram_PPUCTRL |= 8;
+	nes.PPUCTRL = ram_PPUCTRL;
+	TITLE_ANTI_PIRACY();
 }
 
 void DoIntroTransition(ubyte[] tiles) @safe {

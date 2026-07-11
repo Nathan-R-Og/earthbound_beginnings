@@ -27,7 +27,7 @@ See also: [The Disassembly](https://github.com/Nathan-R-Og/mother).
 
 ## Setup guide
 
-1. Place an Earthbound Beginnings rom in the root of your project. Name it `ebb.nes`.
+1. Place an Earthbound Beginnings rom in the root of your project. Name it `earthbound_beginnings.nes`.
 2. Run `python3 ./tools/configure.py`.
 
 ## Building guide
